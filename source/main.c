@@ -43,19 +43,24 @@
 #include "cybsp.h"
 #include "cy_retarget_io.h"
 #include "stdlib.h"
-#include "config.h"
 #include "audio.h"
 #ifdef IM_ENABLE_IMU
   #include "imu.h"
 #endif
+#include "bmm.h"
+#include "dps.h"
+#include "radar.h"
 #include "protocol.h"
-
 
 /*******************************************************************************
 * Global Variables
 ********************************************************************************/
 volatile bool pdm_pcm_flag;
 volatile bool imu_flag;
+volatile bool bmm_flag;
+volatile bool dps_flag;
+volatile bool radar_flag;
+cyhal_i2c_t i2c;
 
 
 /*******************************************************************************
@@ -71,6 +76,14 @@ int main(void)
 {
     cy_rslt_t result;
 
+    /* I2C config structure */
+    cyhal_i2c_cfg_t i2c_config =
+    {
+         .is_slave = false,
+         .address = 0,
+         .frequencyhal_hz = 400000
+    };
+
     /* Initialize the device and board peripherals */
     result = cybsp_init() ;
     if (result != CY_RSLT_SUCCESS)
@@ -80,8 +93,21 @@ int main(void)
 
     /* Enable global interrupts */
     __enable_irq();
+    
+    /* Initialize I2C for IMU communication */
+    result = cyhal_i2c_init(&i2c, CYBSP_I2C_SDA, CYBSP_I2C_SCL, NULL);
+    if(CY_RSLT_SUCCESS != result)
+    {
+        return result;
+    }
 
-#ifdef COMPONENT_USBD_BASE
+    /* Configure the I2C */
+    result = cyhal_i2c_configure(&i2c, &i2c_config);
+    if(CY_RSLT_SUCCESS != result)
+    {
+        return result;
+    }
+
     /* Initialize retarget-io to use the debug UART port */
     cy_retarget_io_init(CYBSP_DEBUG_UART_TX, CYBSP_DEBUG_UART_RX, CY_RETARGET_IO_BAUDRATE);
 
@@ -90,7 +116,6 @@ int main(void)
     printf("*********** "
            "PSoC 6 MCU: Imagimob Streaming Protocol"
            "*********** \r\n\n");
-#endif
 
     /* Initialize the User LED */
     cyhal_gpio_init(CYBSP_USER_LED, CYHAL_GPIO_DIR_OUTPUT, CYHAL_GPIO_DRIVE_STRONG, CYBSP_LED_STATE_OFF);
@@ -117,6 +142,33 @@ int main(void)
     result = imu_init();
 #endif
 
+#ifdef IM_ENABLE_BMM
+    /* Initialize IMU transmit buffers */
+    uint8_t transmit_bmm[4 * BMM_AXIS] = {0};
+    float *bmm_raw_data = (float*) transmit_bmm;
+
+    /* Start the magnetometer and timer */
+    result = mag_sensor_init();
+#endif
+
+#ifdef IM_ENABLE_DPS
+    int8 val = 0;
+    /* Initialize DPS transmit buffers */
+    uint8_t transmit_dps[4 * DPS_AXIS] = {0};
+    float *dps_raw_data = (float*) transmit_dps;
+    /* Configure DPS sensor */
+    result = dps_init();
+#endif
+
+#if IM_ENABLE_RADAR
+     /* Initialize Radar transmit buffers */
+    uint8_t transmit_radar[2 * RADAR_AXIS] = {0};
+    int16_t *radar_raw_data = (int16_t*) transmit_radar;
+
+    /* Start the imu and timer */
+    result = radar_init();
+#endif
+
     /* Initialization failed */
     if (CY_RSLT_SUCCESS != result)
     {
@@ -140,6 +192,44 @@ int main(void)
             protocol_send(PROTOCOL_IMU_CHANNEL, transmit_imu, sizeof(transmit_imu));
         }
 #endif
+
+#ifdef IM_ENABLE_BMM
+        if(true == bmm_flag)
+        {
+            bmm_flag = false;
+            /* Store IMU data */
+            bmm350_get_data(bmm_raw_data);
+
+            /* Transmit data over UART */
+            protocol_send(PROTOCOL_BMM_CHANNEL, transmit_bmm, sizeof(transmit_bmm));
+        }
+#endif
+
+#ifdef IM_ENABLE_DPS
+        if(true == dps_flag)
+        {
+            dps_flag = false;
+            /* Store Pressure data */
+            val = dps_get_data(dps_raw_data);
+            if(CY_RSLT_SUCCESS == val)
+            {
+                /* Transmit data over UART */
+                protocol_send(PROTOCOL_DPS_CHANNEL, transmit_dps, sizeof(transmit_dps));
+            }
+        }
+#endif
+
+#if IM_ENABLE_RADAR
+        if (true == radar_flag)
+        {
+            radar_flag = false;
+            /* Store IMU data */
+            radar_get_data(radar_raw_data);
+            /* Transmit data */
+            protocol_send(PROTOCOL_RADAR_CHANNEL, transmit_radar, sizeof(transmit_radar));
+        }
+#endif
+
         if (true == pdm_pcm_flag)
         {
             pdm_pcm_flag = false;

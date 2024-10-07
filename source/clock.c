@@ -55,6 +55,7 @@ static size_t seconds = 0;
 
 void clock_init()
 {
+    cy_rslt_t result;
     /* Timer object used */
     const cyhal_timer_cfg_t timer_cfg =
     {
@@ -67,13 +68,32 @@ void clock_init()
     };
     /* Initialize the timer object. Does not use pin output ('pin' is NC) and
      * does not use a pre-configured clock source ('clk' is NULL). */
-    cyhal_timer_init(&timer_obj, NC, NULL);
+    result = cyhal_timer_init(&timer_obj, NC, NULL);
+    if (result != CY_RSLT_SUCCESS)
+    {
+        CY_ASSERT(0);
+    }
+
     /* Apply timer configuration such as period, count direction, run mode, etc. */
-    cyhal_timer_configure(&timer_obj, &timer_cfg);
+    result = cyhal_timer_configure(&timer_obj, &timer_cfg);
+    if (result != CY_RSLT_SUCCESS)
+    {
+        CY_ASSERT(0);
+    }
+
     /* Set the frequency of timer to 10000 counts in a second or 10000 Hz */
-    cyhal_timer_set_frequency(&timer_obj, 10000);
+    result = cyhal_timer_set_frequency(&timer_obj, 10000);
+    if (result != CY_RSLT_SUCCESS)
+    {
+        CY_ASSERT(0);
+    }
+
     /* Start the timer with the configured settings */
-    cyhal_timer_start(&timer_obj);
+    result = cyhal_timer_start(&timer_obj);
+    if (result != CY_RSLT_SUCCESS)
+    {
+        CY_ASSERT(0);
+    }
 }
 
 void clock_update()

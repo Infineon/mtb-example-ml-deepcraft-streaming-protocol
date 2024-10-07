@@ -5,7 +5,6 @@
 *
 * Related Document: See README.md
 *
-*
 *******************************************************************************
 * Copyright 2024, Cypress Semiconductor Corporation (an Infineon company) or
 * an affiliate of Cypress Semiconductor Corporation.  All rights reserved.
@@ -41,12 +40,13 @@
 
 #ifndef CONFIG_H
 #define CONFIG_H
+#include "cyhal.h"
 
 /******************************************************************************
  * Constants
  *****************************************************************************/
-
 /* Enabling or disabling the IMU is now in Makefile SHIELD_DATA_COLLECTION. */
+extern cyhal_i2c_t i2c;
 
 /* Set IMU_SAMPLE_RATE to one of the following
  * BMI160_ACCEL_ODR_400HZ / BMI2_ACC_ODR_400HZ
@@ -69,7 +69,6 @@
 #else
 #define IMU_SAMPLE_RANGE BMI160_ACCEL_RANGE_8G
 #endif /* CONFIG_H */
-
 
 /* PDM sample rates */
 #define SAMPLE_RATE_8_KHZ    8000u

@@ -42,18 +42,20 @@
 #include "audio.h"
 #include "config.h"
 
-
 /******************************************************************************
  * Macros
  *****************************************************************************/
 /* Desired sample rate. Typical values: 8/16/22.05/32/44.1/48kHz */
 #define SAMPLE_RATE_HZ              PDM_SAMPLE_RATE
+
 /* Decimation Rate of the PDM/PCM block. Typical value is 64 */
 #define DECIMATION_RATE             64u
+
 /* Audio Subsystem Clock. Typical values depends on the desire sample rate:
 - 8/16/48kHz    : 24.576 MHz
 - 22.05/44.1kHz : 22.579 MHz */
 #define AUDIO_SYS_CLOCK_HZ          24576000u
+
 /* PDM/PCM Pins */
 #define PDM_DATA                    P10_5
 #define PDM_CLK                     P10_4
@@ -86,7 +88,7 @@ const cyhal_pdm_pcm_cfg_t pdm_pcm_cfg =
 
 
 /*******************************************************************************
-* Local Function Prototypes
+* Function Prototypes
 *******************************************************************************/
 cy_rslt_t pdm_clock_init(void);
 void pdm_pcm_event_handler(void *arg, cyhal_pdm_pcm_event_t event);

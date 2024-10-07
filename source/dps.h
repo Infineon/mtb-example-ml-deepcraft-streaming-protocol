@@ -1,8 +1,11 @@
 /******************************************************************************
-* File Name:   protocol.h
+* File Name:   dps.h
 *
 * Description: This file contains the function prototypes and constants used
-*   in protocol.c.
+*   in dps.c.
+*
+* Related Document: See README.md
+*
 *
 *******************************************************************************
 * Copyright 2024, Cypress Semiconductor Corporation (an Infineon company) or
@@ -37,21 +40,23 @@
 * so agrees to indemnify Cypress against all liability.
 *******************************************************************************/
 
-#ifndef SOURCE_PROTOCOL_H_
-#define SOURCE_PROTOCOL_H_
+#ifndef PRESSURE_H_
+#define PRESSURE_H_
 
-#include "cy_utils.h"
-#include "stdlib.h"
-#include "streaming.h"
+/******************************************************************************
+ * Global Variables
+ *****************************************************************************/
+extern volatile bool dps_flag;
 
-#define PROTOCOL_AUDIO_CHANNEL 1
-#define PROTOCOL_IMU_CHANNEL 2
-#define PROTOCOL_BMM_CHANNEL 3
-#define PROTOCOL_RADAR_CHANNEL 4
-#define PROTOCOL_DPS_CHANNEL 5
+/******************************************************************************
+ * Macros
+ *****************************************************************************/
+#define DPS_AXIS 2
 
-void protocol_init();
-void protocol_repl();
-void protocol_send(uint8_t channel, const uint8_t* data, size_t count);
+/*******************************************************************************
+* Function Prototypes
+*******************************************************************************/
+cy_rslt_t dps_init(void);
+cy_rslt_t dps_get_data(float *dps_data);
 
-#endif /* SOURCE_PROTOCOL_H_ */
+#endif /* PRESSURE_H_ */

@@ -76,6 +76,33 @@ static const char* CONFIG_MESSAGE =
         "            \"shape\": [ 1, 3 ],\r\n"
         "            \"rates\": [ 50 ]\r\n"
 #endif
+#if IM_ENABLE_BMM
+        "        },\r\n"
+        "        {\r\n"
+        "            \"channel\": 3,\r\n"
+        "            \"type\": \"Magnetometer\",\r\n"
+        "            \"datatype\": \"f32\",\r\n"
+        "            \"shape\": [ 1, 3 ],\r\n"
+        "            \"rates\": [ 50 ]\r\n"
+#endif
+#if IM_ENABLE_RADAR
+        "        },\r\n"
+        "        {\r\n"
+        "            \"channel\": 4,\r\n"
+        "            \"type\": \"RADAR\",\r\n"
+        "            \"datatype\": \"f32\",\r\n"
+        "            \"shape\": [ 128, 1 ],\r\n"
+        "            \"rates\": [ 100000 ]\r\n"
+#endif
+#if IM_ENABLE_DPS
+        "        },\r\n"
+        "        {\r\n"
+        "            \"channel\": 5,\r\n"
+        "            \"type\": \"DPS\",\r\n"
+        "            \"datatype\": \"f32\",\r\n"
+        "            \"shape\": [ 1, 2 ],\r\n"
+        "            \"rates\": [ 50 ]\r\n"
+#endif
         "        }\r\n"
         "    ]\r\n"
         "}\r\n\0";
@@ -91,6 +118,9 @@ static char receive_buffer[RECEIVE_BUFFER_SIZE];
 static char *receive_p = receive_buffer;
 static volatile bool subscribe_audio = false;
 static volatile bool subscribe_imu = false;
+static volatile bool subscribe_bmm = false;
+static volatile bool subscribe_dps = false;
+static volatile bool subscribe_radar = false;
 static uint32_t last_receive_time = 0;
 
 
@@ -125,18 +155,6 @@ void protocol_repl()
     /* Update clock */
     clock_update();
 
-    /* Test clock */
-    /* Uncomment if desired!
-    static uint32_t last_t = 0;
-    if (clock_get_ms() > last_t + 1000)
-    {
-        static char buffer[20];
-        sprintf(buffer, "%lu\r\n", clock_get_ms());
-        streaming_send(buffer, strlen(buffer));
-        last_t += 1000;
-    }
-    */
-
     /* Read and handle data if any bytes are available */
     size_t bytes_read = streaming_receive(receive_p, RECEIVE_BUFFER_SIZE - (receive_p - receive_buffer));
     if (bytes_read)
@@ -162,7 +180,11 @@ void protocol_repl()
             /* config? */
             if (strcmp(receive_buffer, "config?") == 0)
             {
-                subscribe_audio = subscribe_imu = false;
+                subscribe_audio = false;
+                subscribe_imu = false;
+                subscribe_bmm = false;
+                subscribe_radar = false;
+                subscribe_dps = false;
                 streaming_send(CONFIG_MESSAGE, strlen(CONFIG_MESSAGE));
             }
             /* subscribe,1,16000 */
@@ -189,10 +211,53 @@ void protocol_repl()
                 streaming_send(OK_MESSAGE, strlen(OK_MESSAGE));
             }
 #endif
+#if IM_ENABLE_BMM
+            /* subscribe,3,50 */
+            else if (strcmp(receive_buffer, "subscribe,3,50") == 0)
+            {
+                subscribe_bmm = true;
+            }
+            /* unsubscribe,3 */
+            else if (strcmp(receive_buffer, "unsubscribe,3") == 0)
+            {
+                subscribe_bmm = false;
+                streaming_send(OK_MESSAGE, strlen(OK_MESSAGE));
+            }
+#endif
+#if IM_ENABLE_RADAR
+            /* subscribe,4,100000 */
+            else if (strcmp(receive_buffer, "subscribe,4,100000") == 0)
+            {
+                subscribe_radar = true;
+            }
+            /* unsubscribe,4 */
+            else if (strcmp(receive_buffer, "unsubscribe,4") == 0)
+            {
+                subscribe_radar = false;
+                streaming_send(OK_MESSAGE, strlen(OK_MESSAGE));
+            }
+#endif
+#if IM_ENABLE_DPS
+            /* subscribe,5,50 */
+            else if (strcmp(receive_buffer, "subscribe,5,50") == 0)
+            {
+                subscribe_dps = true;
+            }
+            /* unsubscribe,5 */
+            else if (strcmp(receive_buffer, "unsubscribe,5") == 0)
+            {
+                subscribe_dps = false;
+                streaming_send(OK_MESSAGE, strlen(OK_MESSAGE));
+            }
+#endif
             /* unsubscribe */
             else if (strcmp(receive_buffer, "unsubscribe") == 0)
             {
-                subscribe_audio = subscribe_imu = false;
+                subscribe_audio = false;
+                subscribe_imu = false;
+                subscribe_bmm = false;
+                subscribe_radar = false;
+                subscribe_dps = false;
                 streaming_send(OK_MESSAGE, strlen(OK_MESSAGE));
             }
             /* empty command or heartbeat */
@@ -218,9 +283,13 @@ void protocol_repl()
     }
 
     /* Check receive timeout: If no message for 5 seconds, stop streaming */
-    if ((subscribe_audio || subscribe_imu) && clock_get_ms() - last_receive_time > HEARTBEAT_TIMEOUT_MS)
+    if ((subscribe_audio || subscribe_imu || subscribe_bmm || subscribe_radar || subscribe_dps) && clock_get_ms() - last_receive_time > HEARTBEAT_TIMEOUT_MS)
     {
-        subscribe_audio = subscribe_imu = false;
+        subscribe_audio = false;
+        subscribe_imu = false;
+        subscribe_bmm = false;
+        subscribe_radar = false;
+        subscribe_dps = false;
     }
 }
 
@@ -257,5 +326,30 @@ void protocol_send(uint8_t channel, const uint8_t* data, size_t size)
             streaming_send(data, size);
             streaming_send(CRLF, 2);
         }
+        break;
+    case PROTOCOL_BMM_CHANNEL:
+        if (subscribe_bmm)
+        {
+            streaming_send(header, 2);
+            streaming_send(data, size);
+            streaming_send(CRLF, 2);
+        }
+        break;
+    case PROTOCOL_RADAR_CHANNEL:
+        if (subscribe_radar)
+        {
+            streaming_send(header, 2);
+            streaming_send(data, size);
+            streaming_send(CRLF, 2);
+        }
+        break;
+    case PROTOCOL_DPS_CHANNEL:
+        if (subscribe_dps)
+        {
+            streaming_send(header, 2);
+            streaming_send(data, size);
+            streaming_send(CRLF, 2);
+        }
+        break;
     }
 }

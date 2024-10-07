@@ -1,6 +1,9 @@
 /******************************************************************************
 * File Name:   audio.h
 *
+* Description: This file contains the function prototypes and variables
+*              used in audio.c.
+*
 *******************************************************************************
 * Copyright 2024, Cypress Semiconductor Corporation (an Infineon company) or
 * an affiliate of Cypress Semiconductor Corporation.  All rights reserved.
@@ -44,6 +47,7 @@
  *****************************************************************************/
 /* Define how many samples in a frame */
 #define FRAME_SIZE                  (1024)
+
 /******************************************************************************
  * Global Variables
  *****************************************************************************/
@@ -54,6 +58,5 @@ extern volatile bool pdm_pcm_flag;
 *******************************************************************************/
 cy_rslt_t pdm_init(void);
 void pdm_preprocessing_feed(int16_t *preprocessed_data);
-
 
 #endif /* SOURCE_AUDIO_H_ */

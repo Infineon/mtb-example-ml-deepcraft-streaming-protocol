@@ -39,7 +39,6 @@
 * of such system or application assumes all risk of such use and in doing
 * so agrees to indemnify Cypress against all liability.
 *******************************************************************************/
-
 #ifndef IMU_H
 #define IMU_H
 
@@ -60,6 +59,5 @@ extern volatile bool imu_flag;
 *******************************************************************************/
 cy_rslt_t imu_init(void);
 void imu_get_data(float *imu_data);
-
 
 #endif /* IMU_H */

@@ -1,8 +1,10 @@
 /******************************************************************************
-* File Name:   protocol.h
+* File Name:   radar.h
 *
 * Description: This file contains the function prototypes and constants used
-*   in protocol.c.
+*   in radar.c.
+*
+* Related Document: See README.md
 *
 *******************************************************************************
 * Copyright 2024, Cypress Semiconductor Corporation (an Infineon company) or
@@ -37,21 +39,27 @@
 * so agrees to indemnify Cypress against all liability.
 *******************************************************************************/
 
-#ifndef SOURCE_PROTOCOL_H_
-#define SOURCE_PROTOCOL_H_
+#ifndef RADAR_H_
+#define RADAR_H_
 
-#include "cy_utils.h"
-#include "stdlib.h"
-#include "streaming.h"
+#include "cy_result.h"
+#include "stdbool.h"
+#include "resource_map.h"
 
-#define PROTOCOL_AUDIO_CHANNEL 1
-#define PROTOCOL_IMU_CHANNEL 2
-#define PROTOCOL_BMM_CHANNEL 3
-#define PROTOCOL_RADAR_CHANNEL 4
-#define PROTOCOL_DPS_CHANNEL 5
+/******************************************************************************
+ * Global Variables
+ *****************************************************************************/
+cy_rslt_t radar_init(void);
 
-void protocol_init();
-void protocol_repl();
-void protocol_send(uint8_t channel, const uint8_t* data, size_t count);
+/******************************************************************************
+ * Macros
+ *****************************************************************************/
+#define RADAR_AXIS 128
 
-#endif /* SOURCE_PROTOCOL_H_ */
+/*******************************************************************************
+* Function Prototypes
+*******************************************************************************/
+extern volatile bool radar_flag;
+void radar_get_data(int16_t *radar_data);
+
+#endif /* RADAR_H_ */

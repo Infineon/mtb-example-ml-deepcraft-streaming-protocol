@@ -1,6 +1,9 @@
 /******************************************************************************
 * File Name:   streaming.h
 *
+* Description: This file contains the function prototypes and constants used
+*   in streaming.c.
+*
 *******************************************************************************
 * Copyright 2024, Cypress Semiconductor Corporation (an Infineon company) or
 * an affiliate of Cypress Semiconductor Corporation.  All rights reserved.

@@ -1,8 +1,10 @@
 /******************************************************************************
-* File Name:   protocol.h
+* File Name: resource_map.h
 *
-* Description: This file contains the function prototypes and constants used
-*   in protocol.c.
+* Description: This file defines the SPI and GPIO pin map for all the supported 
+*              kits.
+*
+* Related Document: See README.md
 *
 *******************************************************************************
 * Copyright 2024, Cypress Semiconductor Corporation (an Infineon company) or
@@ -37,21 +39,19 @@
 * so agrees to indemnify Cypress against all liability.
 *******************************************************************************/
 
-#ifndef SOURCE_PROTOCOL_H_
-#define SOURCE_PROTOCOL_H_
+#ifndef RESOURCE_MAP_H_
+#define RESOURCE_MAP_H_
+#include "cybsp.h"
 
-#include "cy_utils.h"
-#include "stdlib.h"
-#include "streaming.h"
+#ifdef IM_ENABLE_RADAR
 
-#define PROTOCOL_AUDIO_CHANNEL 1
-#define PROTOCOL_IMU_CHANNEL 2
-#define PROTOCOL_BMM_CHANNEL 3
-#define PROTOCOL_RADAR_CHANNEL 4
-#define PROTOCOL_DPS_CHANNEL 5
+#define PIN_XENSIV_BGT60TRXX_SPI_SCLK       CYBSP_RSPI_CLK
+#define PIN_XENSIV_BGT60TRXX_SPI_MOSI       CYBSP_RSPI_MOSI
+#define PIN_XENSIV_BGT60TRXX_SPI_MISO       CYBSP_RSPI_MISO
+#define PIN_XENSIV_BGT60TRXX_SPI_CSN        CYBSP_RSPI_CS
+#define PIN_XENSIV_BGT60TRXX_IRQ            CYBSP_RSPI_IRQ
+#define PIN_XENSIV_BGT60TRXX_RSTN           CYBSP_RXRES_L
 
-void protocol_init();
-void protocol_repl();
-void protocol_send(uint8_t channel, const uint8_t* data, size_t count);
+#endif
 
-#endif /* SOURCE_PROTOCOL_H_ */
+#endif 

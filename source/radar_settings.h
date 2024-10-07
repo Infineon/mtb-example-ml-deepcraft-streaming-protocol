@@ -1,8 +1,9 @@
 /******************************************************************************
-* File Name:   protocol.h
+* File Name:   radar_settings.h
 *
-* Description: This file contains the function prototypes and constants used
-*   in protocol.c.
+* Description: This file contains configuration settings for radar sensor.
+*
+* Related Document: See README.md
 *
 *******************************************************************************
 * Copyright 2024, Cypress Semiconductor Corporation (an Infineon company) or
@@ -37,21 +38,59 @@
 * so agrees to indemnify Cypress against all liability.
 *******************************************************************************/
 
-#ifndef SOURCE_PROTOCOL_H_
-#define SOURCE_PROTOCOL_H_
+#ifndef XENSIV_BGT60TRXX_CONF_H
+#define XENSIV_BGT60TRXX_CONF_H
 
-#include "cy_utils.h"
-#include "stdlib.h"
-#include "streaming.h"
+#define XENSIV_BGT60TRXX_CONF_DEVICE (XENSIV_DEVICE_BGT60TR13C)
+#define XENSIV_BGT60TRXX_CONF_START_FREQ_HZ (61020100000)
+#define XENSIV_BGT60TRXX_CONF_END_FREQ_HZ (61479904000)
+#define XENSIV_BGT60TRXX_CONF_NUM_SAMPLES_PER_CHIRP (128)
+#define XENSIV_BGT60TRXX_CONF_NUM_CHIRPS_PER_FRAME (16)
+#define XENSIV_BGT60TRXX_CONF_NUM_RX_ANTENNAS (1)
+#define XENSIV_BGT60TRXX_CONF_NUM_TX_ANTENNAS (1)
+#define XENSIV_BGT60TRXX_CONF_SAMPLE_RATE (2352941)
+#define XENSIV_BGT60TRXX_CONF_CHIRP_REPETITION_TIME_S (6.945e-05)
+#define XENSIV_BGT60TRXX_CONF_FRAME_REPETITION_TIME_S (0.0049961)
+#define XENSIV_BGT60TRXX_CONF_NUM_REGS (38)
 
-#define PROTOCOL_AUDIO_CHANNEL 1
-#define PROTOCOL_IMU_CHANNEL 2
-#define PROTOCOL_BMM_CHANNEL 3
-#define PROTOCOL_RADAR_CHANNEL 4
-#define PROTOCOL_DPS_CHANNEL 5
-
-void protocol_init();
-void protocol_repl();
-void protocol_send(uint8_t channel, const uint8_t* data, size_t count);
-
-#endif /* SOURCE_PROTOCOL_H_ */
+const uint32_t register_lst[] = {
+    0x11e8270UL, 
+    0x3088210UL, 
+    0x9e967fdUL, 
+    0xb0805b4UL, 
+    0xdf02fffUL,
+    0xf010700UL, 
+    0x11000000UL, 
+    0x13000000UL, 
+    0x15000000UL, 
+    0x17000be0UL, 
+    0x19000000UL, 
+    0x1b000000UL, 
+    0x1d000000UL, 
+    0x1f000b60UL, 
+    0x21130c51UL,
+    0x234ff41fUL,
+    0x25006f7bUL, 
+    0x2d000490UL, 
+    0x3b000480UL, 
+    0x49000480UL, 
+    0x57000480UL, 
+    0x5911be0eUL, 
+    0x5b3ef40aUL,
+    0x5d00f000UL,
+    0x5f787e1eUL, 
+    0x61f5208cUL, 
+    0x630000a4UL, 
+    0x65000252UL, 
+    0x67000080UL, 
+    0x69000000UL, 
+    0x6b000000UL, 
+    0x6d000000UL, 
+    0x6f092910UL, 
+    0x7f000100UL, 
+    0x8f000100UL, 
+    0x9f000100UL, 
+    0xad000000UL, 
+    0xb7000000UL
+};
+#endif /* XENSIV_BGT60TRXX_CONF_H */

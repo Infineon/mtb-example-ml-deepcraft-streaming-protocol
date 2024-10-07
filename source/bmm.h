@@ -1,8 +1,10 @@
 /******************************************************************************
-* File Name:   protocol.h
+* File Name:   bmm.h
 *
 * Description: This file contains the function prototypes and constants used
-*   in protocol.c.
+*   in bmm.c.
+*
+* Related Document: See README.md
 *
 *******************************************************************************
 * Copyright 2024, Cypress Semiconductor Corporation (an Infineon company) or
@@ -36,22 +38,26 @@
 * of such system or application assumes all risk of such use and in doing
 * so agrees to indemnify Cypress against all liability.
 *******************************************************************************/
+#ifndef SOURCE_BMM_H_
+#define SOURCE_BMM_H_
 
-#ifndef SOURCE_PROTOCOL_H_
-#define SOURCE_PROTOCOL_H_
+#include "cy_result.h"
+#include "stdbool.h"
 
-#include "cy_utils.h"
-#include "stdlib.h"
-#include "streaming.h"
+/******************************************************************************
+ * Global Variables
+ *****************************************************************************/
+extern volatile bool bmm_flag;
 
-#define PROTOCOL_AUDIO_CHANNEL 1
-#define PROTOCOL_IMU_CHANNEL 2
-#define PROTOCOL_BMM_CHANNEL 3
-#define PROTOCOL_RADAR_CHANNEL 4
-#define PROTOCOL_DPS_CHANNEL 5
+/******************************************************************************
+ * Macros
+ *****************************************************************************/
+#define BMM_AXIS 3
 
-void protocol_init();
-void protocol_repl();
-void protocol_send(uint8_t channel, const uint8_t* data, size_t count);
+/*******************************************************************************
+* Function Prototypes
+*******************************************************************************/
+cy_rslt_t mag_sensor_init(void);
+void bmm350_get_data(float *bmm_data);
 
-#endif /* SOURCE_PROTOCOL_H_ */
+#endif /* SOURCE_BMM_H_ */

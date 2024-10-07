@@ -1,11 +1,11 @@
 # Imagimob streaming protocol for PSoC&trade; 6
 
-This ModusToolbox&trade; firmware project implements the [Imagimob streaming protocol](PROTOCOL.md) for PSoC&trade; 6. This firmware currently supports a mono-microphone at 16 kHz and as an option, IMU at 50 Hz by setting SHIELD_DATA_COLLECTION to the right shield board in the Makefile. Adding support for other sensors is easy.
+This ModusToolbox&trade; firmware project implements the [Imagimob streaming protocol](PROTOCOL.md) for PSoC&trade; 6. This firmware supports collecting data from one of this sensors - motion, magnetometer, pressure, radar sensors, and PDM/PCM microphone by setting SHIELD_DATA_COLLECTION to the right shield board in the Makefile.
 
 
 [View this README on GitHub.](https://github.com/Infineon/mtb-example-imagimob-streaming-protocol)
 
-[Provide feedback on this code example.](https://cypress.co1.qualtrics.com/jfe/form/SV_1NTns53sK2yiljn?Q_EED=eyJVbmlxdWUgRG9jIElkIjoiQ0UyMzk2OTEiLCJTcGVjIE51bWJlciI6IjAwMi0zOTY5MSIsIkRvYyBUaXRsZSI6IkltYWdpbW9iIHN0cmVhbWluZyBwcm90b2NvbCBmb3IgUFNvQyZ0cmFkZTsgNiIsInJpZCI6InNoYWhoZXRhbWl0ayIsIkRvYyB2ZXJzaW9uIjoiMS4wLjAiLCJEb2MgTGFuZ3VhZ2UiOiJFbmdsaXNoIiwiRG9jIERpdmlzaW9uIjoiTUNEIiwiRG9jIEJVIjoiSUNXIiwiRG9jIEZhbWlseSI6IlBTT0MifQ==)
+[Provide feedback on this code example.](https://cypress.co1.qualtrics.com/jfe/form/SV_1NTns53sK2yiljn?Q_EED=eyJVbmlxdWUgRG9jIElkIjoiQ0UyMzk2OTEiLCJTcGVjIE51bWJlciI6IjAwMi0zOTY5MSIsIkRvYyBUaXRsZSI6IkltYWdpbW9iIHN0cmVhbWluZyBwcm90b2NvbCBmb3IgUFNvQyZ0cmFkZTsgNiIsInJpZCI6InNoYWhoZXRhbWl0ayIsIkRvYyB2ZXJzaW9uIjoiMS4xLjAiLCJEb2MgTGFuZ3VhZ2UiOiJFbmdsaXNoIiwiRG9jIERpdmlzaW9uIjoiTUNEIiwiRG9jIEJVIjoiSUNXIiwiRG9jIEZhbWlseSI6IlBTT0MifQ==)
 
 
 
@@ -20,8 +20,8 @@ This ModusToolbox&trade; firmware project implements the [Imagimob streaming pro
 ## Supported toolchains (make variable 'TOOLCHAIN')
 
 - GNU Arm&reg; Embedded Compiler v10.3.1 (`GCC_ARM`) – Default value of `TOOLCHAIN`
-- Arm&reg; Compiler v6.16 (`ARM`)
-- IAR C/C++ Compiler v9.30.1 (`IAR`)
+- Arm&reg; Compiler v6.22 (`ARM`)
+- IAR C/C++ Compiler v9.50.2 (`IAR`)
 
 
 ## Supported kits (make variable 'TARGET')
@@ -31,11 +31,13 @@ This ModusToolbox&trade; firmware project implements the [Imagimob streaming pro
 
 ## Hardware setup
 
-Connect an Arduino shield ([CY8CKIT-028-EPD](https://www.infineon.com/CY8CKIT-028-EPD), [CY8CKIT-028-SENSE](https://www.infineon.com/CY8CKIT-028-SENSE), or [CY8CKIT-028-TFT](https://www.infineon.com/CY8CKIT-028-TFT)) to the baseboard's Arduino header.
+Connect an Arduino shield ([CY8CKIT-028-EPD](https://www.infineon.com/CY8CKIT-028-EPD), [CY8CKIT-028-SENSE](https://www.infineon.com/CY8CKIT-028-SENSE), [CY8CKIT-028-TFT](https://www.infineon.com/CY8CKIT-028-TFT), or [SHIELD_XENSIV_A](https://www.infineon.com/SHIELD_XENSIV_A)) to the baseboard's Arduino header.
 
 > **Note:** For the CY8CKIT-062S2-AI, shield is not needed.
 
 This example uses the board's default configuration. See the kit user guide to ensure that the board is configured correctly.
+
+Connect the USB Type-C cable to the SHIELD_XENSIV_A USB connector (J11) when the CY8CKIT-062S2-43012 is powered only with the MCU USB (J7). This will enable the power supply for the magnetometer sensor.
 
 
 ## Software setup
@@ -170,7 +172,8 @@ The protocol runs with text commands in a simple Run-Eval-Print loop (REPL), whi
 1. Connect the board to your PC using the provided USB cable through the KitProg3 USB connector. The example is set up to use the CY8CKIT-062S2-AI.
 
    If you are using the CY8CKIT-062S2-43012, update the `SHIELD_DATA_COLLECTION` variable corresponding to `APP_CY8CKIT-062S2-43012` in the *Makefile*.
-   
+
+   - if using the SHIELD_XENSIV_A shield, change to `SHIELD_DATA_COLLECTION=XENSIV_SHIELD` in the Makefile.
    - if using the CY8CKIT-028-TFT shield, change to `SHIELD_DATA_COLLECTION=TFT_SHIELD` in the Makefile.
    - if using the CY8CKIT-028-EPD shield, change to `SHIELD_DATA_COLLECTION=EPD_SHIELD` in the Makefile.
    - if using the CY8CKIT-028-SENSE shield, selection depends on kit version:
@@ -211,7 +214,7 @@ The protocol runs with text commands in a simple Run-Eval-Print loop (REPL), whi
       ```
    </details>
 
-4. After programming, the application starts automatically. 
+4. After programming, the application starts automatically.
    Confirm that "Imagimob streaming protocol for ModusToolbox / PSoC6" is displayed on the UART terminal.
 
    **Figure 1. Terminal output on program startup**
@@ -219,17 +222,17 @@ The protocol runs with text commands in a simple Run-Eval-Print loop (REPL), whi
    ![Figure 1](images/terminal-usbd-start.png)
 
 
-5. Connect the board to the PC through PSoC&trade; 6 USB connector (J2) using a Type-C USB cable. This enables a serial port for sensor data collection.
+5. Connect the board to the PC through PSoC&trade; 6 USB connector using the USB cable. This enables a serial port for sensor data collection.
 
 6. Ensure that the power LED (D1) turns ON, indicating the board is powered.
 
 7. In the terminal application, open the serial connection to the device. It should present itself as USB serial device. Connect to this port with the following settings:
 
      Baud rate: 115200 bps; Data: 8 bits; Parity: None; stop: 1 bit; Flow control: None
-      
+
      **Figure 2. Serial port settings**
 
-     ![Figure 2](images/serial-port-settings.png)
+     ![Figure 2](images/teraterm.png)
 
 
 8. Set the terminal settings as follows:
@@ -244,21 +247,34 @@ The protocol runs with text commands in a simple Run-Eval-Print loop (REPL), whi
 9. Enter `config?`, press enter (to send CR+LF), and verify that the device responds with a JSON structure describing the configuration.
 
    **Figure 4. Terminal test**
-   
-   ![Figure 4](images/terminal-test.png)
 
+   ![Figure 4](images/usb-config.png)
 
-10. Enter `subscribe,1,16000` and verify that the device streams audio data. 
-   
+10. Enter `subscribe,1,16000` and verify that the device streams audio data.
+
     Notice that it is set to stop after 5 seconds unless it receives heartbeat commands.The garbled text on the terminal is the audio data.
 
-11. Type `subscribe,2,50` and verify that the device streams IMU data.    
+11. Type `subscribe,2,50` and verify that the device streams motion sensor data.
 
-    Notice that sample collection stops after 5 seconds. The garbled text on the terminal is the IMU data. 
+    Notice that sample collection stops after 5 seconds. The garbled text on the terminal is the motion data.
+
+12. Type `subscribe,3,50` and verify that the device streams magnetometer sensor data.
+
+    Notice that sample collection stops after 5 seconds. The garbled text on the terminal is the magnetometer data.
+
+13. Type `subscribe,4,100000` and verify that the device streams radar sensor data.    
+
+    Notice that sample collection stops after 5 seconds. The garbled text on the terminal is the radar data. 
+
+13. Type `subscribe,5,50` and verify that the device streams pressure sensor data.    
+
+    Notice that sample collection stops after 5 seconds. The garbled text on the terminal is the pressure and temperature data. 
+
 
 > **Note:** Currently backspace is not supported in terminal commands. If you encounter issues such as being unable to see commands on the terminal or receiving unknown command errors, follow the step below:
 >- Reset the terminal and clear the buffer.
 >- Reset board to ensure a fresh execution.
+>- When both the DPS and Radar sensors are active, the data collection speed will reduce. Disable the unused sensor in the Makefile by commenting out the corresponding defines, e.g. #DEFINES+=IM_ENABLE_DPS=1. This will be resolved in a future version of the code example.
 
 ### Test with Imagimob Studio
 
@@ -270,7 +286,7 @@ The protocol runs with text commands in a simple Run-Eval-Print loop (REPL), whi
 
     ![Figure 5](images/studio-project.png)
 
-2. Under **Graph UX** > **Generic**, select **EmptyProject**. 
+2. Under **Graph UX** > **Generic**, select **EmptyProject**.
 
 3. In **New Project Name**, enter the name of the project.
 
@@ -284,7 +300,7 @@ The protocol runs with text commands in a simple Run-Eval-Print loop (REPL), whi
 
 #### Connect and set up Serial Capture to collect data
 
-1. Connect the board to the laptop or PC through PSoC&trade; 6 USB connector (J2) using a Type-C USB cable.
+1. Connect the board to the laptop or PC through PSoC&trade; 6 USB connector using the USB cable.
 
 2. Expand the EmptyProject directory and double-click **Main.imunit** to open the canvas.
 
@@ -292,14 +308,14 @@ The protocol runs with text commands in a simple Run-Eval-Print loop (REPL), whi
 
 4. Expand **Visualization** and drag and drop the **Data Track** unit onto the canvas.
 
-5. Click on the red icon in the **Serial Capture** node and drag over to the gray icon in the **Data Track** node. 
+5. Click on the red icon in the **Serial Capture** node and drag over to the gray icon in the **Data Track** node.
 
     This creates a connection between the two nodes.
 
      **Figure 7. Studio graph**
 
      ![Figure 7](images/studio-graph.png)
-      
+
 
 > **Note:** To check the COM port at which the board is connected, open **Device Manager** > **Ports** and look for USB Serial Device.
 
@@ -342,22 +358,32 @@ Follow the instructions in your preferred IDE.
 
 ## Design and implementation
 
-This code example allows collecting data from either an IMU(BMX160 or BMI160 or BMI270) or PDM/PCM using the [Imagimob Studio](https://developer.imagimob.com/). 
+This code example allows collecting data from one of this sensors - motion, magnetometer, pressure, radar sensors and PDM/PCM microphone using the [Imagimob Studio](https://developer.imagimob.com/).
 
-### IMU capture
+### motion capture
 The code example is designed to collect data from a motion sensor (BMX160 or BMI160 or BMI270). The data consists of the 3-axis accelerometer data obtained from the motion sensor. A timer is configured to interrupt at 50 Hz to sample the motion sensor. The interrupt handler reads all data from the sensor via I2C or SPI and the data is then transmitted over USB and stored using [Imagimob Studio](https://developer.imagimob.com/).
 
 ### PDM/PCM capture
 The code example can be configured to collect pulse density modulation (PDM) to pulse code modulation(PCM) audio data. The PDM/PCM is sampled at 16 kHz and an interrupt is generated after 1024 samples are collected. After collecting 1024 samples, the data is transmitted over USB.
 
+### MAGNETOMETER capture
+The code example can be configured to collect data from magnetometer sensor (BMM350). The data consists of the 3-axis magnetometer data obtained from the magnetometer (BMM350) sensor. A timer is configured to interrupt at 50 Hz to sample the magnetometer (BMM350) sensor. The interrupt handler reads all data from the sensor via I2C, the data is then transmitted over USB.
+
+### PRESSURE capture
+The code example can be configured to collect data from Pressure sensor (DPS368). A timer is configured to interrupt at 50 Hz to sample the Pressure sensor. The interrupt handler reads all data from the sensor via I2C, the data is then transmitted over USB.
+
+### RADAR capture
+The code example can be configured to collect data from Radar sensor (BGT60TR13C). A timer is configured to interrupt at 100000 Hz to sample the Radar sensor. The interrupt handler reads all data from the sensor via SPI, the data is then transmitted over USB.
+
 ### Configuration
 
 This code example is designed to work with one of the Arduino Shields produced by Infineon that includes a motion sensor. To select the shield that is currently being used, modify the *Makefile* to change the define that is being specified. By default, the example uses the CY8CKIT-028-SENSE shield v1 for CY8CKIT-062S2-43012. The valid options are as follows:
-   - **EPD_SHIELD**: For the CY8CKIT-028-EPD with the BMI-160 sensor
-   - **SENSE_SHIELDv1**: For the CY8CKIT-028-SENSE with the BMX-160 sensor
-   - **SENSE_SHIELDv2**: For the CY8CKIT-028-SENSE with the BMI-160 sensor
-   - **TFT_SHIELD**: For the CY8CKIT-028-TFT with the BMI-160 sensor
-   - **AI_KIT**: For CY8CKIT-062S2-AI with BMI-270 sensor
+   - **EPD_SHIELD**: For the CY8CKIT-028-EPD with the BMI160 sensor and microphones
+   - **SENSE_SHIELDv1**: For the CY8CKIT-028-SENSE with the BMX160 sensor and microphones
+   - **SENSE_SHIELDv2**: For the CY8CKIT-028-SENSE with the BMI160 sensor and microphones
+   - **TFT_SHIELD**: For the CY8CKIT-028-TFT with the BMI160 sensor and microphones
+   - **AI_KIT**: For CY8CKIT-062S2-AI with BGT60TR13C, BMI270, BMM350, DPS368 sensors and microphones
+   - **XENSIV_SHIELD**: For the SHIELD_XENSIV_A with the BMI270, BMM350, DPS368 sensors and microphones
 
 ### Resources and settings
 
@@ -368,8 +394,8 @@ This code example is designed to work with one of the Arduino Shields produced b
  GPIO (HAL)    | CYBSP_USER_LED     | User LED
  UART (HAL)|cy_retarget_io_uart_obj| UART HAL object used by Retarget-IO for the Debug UART port
  Timer (HAL) | imu_read_timer  | Timer HAL object used to periodically read from the IMU
- I2C (HAL) | i2c_obj           | I2C HAL object used to communicate with the IMU sensor (used for the [CY8CKIT-028-EPD](https://www.infineon.com/CY8CKIT-028-EPD) or [CY8CKIT-028-TFT](https://www.infineon.com/CY8CKIT-028-TFT) shields or [CY8CKIT-062S2-AI](https://www.infineon.com/CY8CKIT-062S2-AI))
- SPI (HAL) | spi_obj           | SPI HAL object used to communicate with the IMU sensor (used for the [CY8CKIT-028-SENSE](https://www.infineon.com/CY8CKIT-028-SENSE) shield)
+ I2C (HAL) | i2c_obj           | I2C HAL object used to communicate with the motion sensor (used for the [CY8CKIT-028-EPD](https://www.infineon.com/CY8CKIT-028-EPD), [CY8CKIT-028-TFT](https://www.infineon.com/CY8CKIT-028-TFT), or [SHIELD_XENSIV_A](https://www.infineon.com/SHIELD_XENSIV_A) shields or [CY8CKIT-062S2-AI](https://www.infineon.com/CY8CKIT-062S2-AI))
+ SPI (HAL) | spi_obj           | SPI HAL object used to communicate with the motion sensor (used for the [CY8CKIT-028-SENSE](https://www.infineon.com/CY8CKIT-028-SENSE) shield)
 
 <br>
 
@@ -382,7 +408,7 @@ This code example is designed to work with one of the Arduino Shields produced b
    |- audio.c/h           # Implements audio capture from the PDM microphone.
    |- clock.c/h           # Implements a simple millisecond clock used by the protocol implementation.
    |- config.h            # Sample application configuration.
-   |- imu.c/h             # Implements IMU data capture from an IMU (typically on a shield board). These files are not used in the default configuration.
+   |- imu.c/h             # Implements motion data capture from an IMU (typically on a shield board). These files are not used in the default configuration.
    |- main.c              # Main function that initializes drivers and runs the main loop.
    |- protocol.c.h        # Implements the Imagimob streaming protocol.
    |- streaming.c/h       # Implements data streaming over USB or debug UART used by the protocol implementation.
@@ -423,6 +449,7 @@ Document title: *CE239691* - *Imagimob streaming protocol for PSoC&trade; 6*
  Version | Description of change
  ------- | ---------------------
  1.0.0   | New code example
+ 1.1.0   | Added support for data collection using magnetometer, pressure, and radar sensors <br> Added support for SHIELD_XENSIV_A
 <br>
 
 
