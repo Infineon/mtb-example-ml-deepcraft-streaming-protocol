@@ -36,7 +36,6 @@
 * of such system or application assumes all risk of such use and in doing
 * so agrees to indemnify Cypress against all liability.
 *******************************************************************************/
-
 #ifndef SOURCE_PROTOCOL_H_
 #define SOURCE_PROTOCOL_H_
 
@@ -49,6 +48,7 @@
 #define PROTOCOL_BMM_CHANNEL 3
 #define PROTOCOL_RADAR_CHANNEL 4
 #define PROTOCOL_DPS_CHANNEL 5
+#define PROTOCOL_GYRO_CHANNEL 6
 
 void protocol_init();
 void protocol_repl();

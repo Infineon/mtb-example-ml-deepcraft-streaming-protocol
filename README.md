@@ -5,7 +5,7 @@ This ModusToolbox&trade; firmware project implements the [Imagimob streaming pro
 
 [View this README on GitHub.](https://github.com/Infineon/mtb-example-imagimob-streaming-protocol)
 
-[Provide feedback on this code example.](https://cypress.co1.qualtrics.com/jfe/form/SV_1NTns53sK2yiljn?Q_EED=eyJVbmlxdWUgRG9jIElkIjoiQ0UyMzk2OTEiLCJTcGVjIE51bWJlciI6IjAwMi0zOTY5MSIsIkRvYyBUaXRsZSI6IkltYWdpbW9iIHN0cmVhbWluZyBwcm90b2NvbCBmb3IgUFNvQyZ0cmFkZTsgNiIsInJpZCI6InNoYWhoZXRhbWl0ayIsIkRvYyB2ZXJzaW9uIjoiMS4xLjAiLCJEb2MgTGFuZ3VhZ2UiOiJFbmdsaXNoIiwiRG9jIERpdmlzaW9uIjoiTUNEIiwiRG9jIEJVIjoiSUNXIiwiRG9jIEZhbWlseSI6IlBTT0MifQ==)
+[Provide feedback on this code example.](https://cypress.co1.qualtrics.com/jfe/form/SV_1NTns53sK2yiljn?Q_EED=eyJVbmlxdWUgRG9jIElkIjoiQ0UyMzk2OTEiLCJTcGVjIE51bWJlciI6IjAwMi0zOTY5MSIsIkRvYyBUaXRsZSI6IkltYWdpbW9iIHN0cmVhbWluZyBwcm90b2NvbCBmb3IgUFNvQyZ0cmFkZTsgNiIsInJpZCI6InNoYWhoZXRhbWl0ayIsIkRvYyB2ZXJzaW9uIjoiMS4yLjAiLCJEb2MgTGFuZ3VhZ2UiOiJFbmdsaXNoIiwiRG9jIERpdmlzaW9uIjoiTUNEIiwiRG9jIEJVIjoiSUNXIiwiRG9jIEZhbWlseSI6IlBTT0MifQ==)
 
 
 
@@ -182,7 +182,7 @@ The protocol runs with text commands in a simple Run-Eval-Print loop (REPL), whi
 
    - If the shield is Rev "**" or "*A", use `SHIELD_DATA_COLLECTION=SENSE_SHIELD`.
    - If the shield is Rev "*B" or later, use `SHIELD_DATA_COLLECTION=SENSE_SHIELD_v2`.
-
+   >**NOTE:** While switching between different shield for data collection, do clean the application (`make clean`) before building it again.
 2. Open a terminal program and select the KitProg3 COM port. Set the serial port parameters to 8N1 and 115200 baud.
 
 3. Program the board using one of the following:
@@ -248,7 +248,7 @@ The protocol runs with text commands in a simple Run-Eval-Print loop (REPL), whi
 
    **Figure 4. Terminal test**
 
-   ![Figure 4](images/usb-config.png)
+   ![Figure 4](images/usb-terminal.png)
 
 10. Enter `subscribe,1,16000` and verify that the device streams audio data.
 
@@ -262,19 +262,22 @@ The protocol runs with text commands in a simple Run-Eval-Print loop (REPL), whi
 
     Notice that sample collection stops after 5 seconds. The garbled text on the terminal is the magnetometer data.
 
-13. Type `subscribe,4,100000` and verify that the device streams radar sensor data.    
+13. Type `subscribe,4,16` and verify that the device streams radar sensor data.    
 
     Notice that sample collection stops after 5 seconds. The garbled text on the terminal is the radar data. 
 
 13. Type `subscribe,5,50` and verify that the device streams pressure sensor data.    
 
     Notice that sample collection stops after 5 seconds. The garbled text on the terminal is the pressure and temperature data. 
+    
+14. Type `subscribe,6,50` and verify that the device streams gyroscope data.    
+
+    Notice that sample collection stops after 5 seconds. The garbled text on the terminal is the gyroscope data.
 
 
 > **Note:** Currently backspace is not supported in terminal commands. If you encounter issues such as being unable to see commands on the terminal or receiving unknown command errors, follow the step below:
 >- Reset the terminal and clear the buffer.
 >- Reset board to ensure a fresh execution.
->- When both the DPS and Radar sensors are active, the data collection speed will reduce. Disable the unused sensor in the Makefile by commenting out the corresponding defines, e.g. #DEFINES+=IM_ENABLE_DPS=1. This will be resolved in a future version of the code example.
 
 ### Test with Imagimob Studio
 
@@ -450,6 +453,7 @@ Document title: *CE239691* - *Imagimob streaming protocol for PSoC&trade; 6*
  ------- | ---------------------
  1.0.0   | New code example
  1.1.0   | Added support for data collection using magnetometer, pressure, and radar sensors <br> Added support for SHIELD_XENSIV_A
+ 1.2.0   | Added support for data collection for gyroscope
 <br>
 
 

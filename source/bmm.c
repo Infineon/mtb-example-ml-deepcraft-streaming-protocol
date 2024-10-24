@@ -43,7 +43,13 @@
 #include "config.h"
 #include "cyhal.h"
 #include "cybsp.h"
+#if defined(IM_MAG_BMM350) || (IM_XSS_BMM350)
 #include "mtb_bmm350.h"
+#endif
+#ifdef IM_BMX_160_IMU_SPI
+#include "mtb_bmx160.h"
+#endif
+
 /*******************************************************************************
 * Macros
 *******************************************************************************/
@@ -51,9 +57,9 @@
 #define BMM350_SCAN_RATE        50
 #define BMM350_TIMER_FREQUENCY  100000
 #define BMM350_TIMER_PERIOD     (BMM350_TIMER_FREQUENCY/BMM350_SCAN_RATE)
-#define BMM350_TIMER_PRIORITY   3
+#define BMM350_TIMER_PRIORITY   4
 
-#ifdef CY_XSS_BMM350
+#ifdef IM_XSS_BMM350
 #define BMM350_ADDRESS (MTB_BMM350_ADDRESS_DEFAULT)
 #else
 #define BMM350_ADDRESS (MTB_BMM350_ADDRESS_SEC)
@@ -62,8 +68,12 @@
 /*******************************************************************************
 * Global Variables
 *******************************************************************************/
-#ifdef CY_MAG_BMM350
-mtb_bmm350_t dev;
+#if defined(IM_MAG_BMM350) || (IM_XSS_BMM350)
+    mtb_bmm350_t sensor_bmm350;
+#endif
+#ifdef IM_BMX_160_IMU_SPI
+    /* BMX160 driver structures */
+    mtb_bmx160_t sensor_bmm150;
 #endif
 /* timer used for getting data */
 cyhal_timer_t bmm350_timer;
@@ -93,9 +103,19 @@ cy_rslt_t bmm350_timer_init(void);
 cy_rslt_t mag_sensor_init(void)
 {
     cy_rslt_t result;
-#ifdef CY_MAG_BMM350
+
+#ifdef IM_BMX_160_IMU_SPI
+    result = mtb_bmx160_init_spi(&sensor_bmm150, &spi, CYBSP_SPI_CS);
+    if(CY_RSLT_SUCCESS != result)
+    {
+        return result;
+    }
+    bmm_flag = false;
+#endif
+
+#if defined(IM_MAG_BMM350) || (IM_XSS_BMM350)
     /* Initialize BMM350 */
-    result = mtb_bmm350_init_i2c(&dev, &i2c, BMM350_ADDRESS);
+    result = mtb_bmm350_init_i2c(&sensor_bmm350, &i2c, BMM350_ADDRESS);
     if(CY_RSLT_SUCCESS != result)
     {
         return result;
@@ -212,16 +232,27 @@ void bmm350_timer_intr_handler(void *callback_arg, cyhal_timer_event_t event)
 *******************************************************************************/
 void bmm350_get_data(float *bmm_data)
 {
-#ifdef CY_MAG_BMM350
-    /* Read data from BMM sensor */
     cy_rslt_t result;
-    mtb_bmm350_data_t data1;
-    result = mtb_bmm350_read(&dev,&data1);
+#ifdef IM_BMX_160_IMU_SPI
+    mtb_bmx160_data_t data_bmm;
+    result = mtb_bmx160_read(&sensor_bmm150, &data_bmm);
     if (CY_RSLT_SUCCESS == result)
     {
-        bmm_data[0] = data1.sensor_data.y;
-        bmm_data[1] = data1.sensor_data.x;
-        bmm_data[2] = data1.sensor_data.z;
+        bmm_data[0] = data_bmm.mag.y;
+        bmm_data[1] = data_bmm.mag.x;
+        bmm_data[2] = data_bmm.mag.z;
+    }
+#endif
+
+#if defined(IM_MAG_BMM350) || (IM_XSS_BMM350)
+    /* Read data from BMM sensor */
+    mtb_bmm350_data_t data_bmm;
+    result = mtb_bmm350_read(&sensor_bmm350, &data_bmm);
+    if (CY_RSLT_SUCCESS == result)
+    {
+        bmm_data[0] = data_bmm.sensor_data.y;
+        bmm_data[1] = data_bmm.sensor_data.x;
+        bmm_data[2] = data_bmm.sensor_data.z;
     }
 #endif
 }

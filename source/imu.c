@@ -42,9 +42,9 @@
 #include "imu.h"
 #include "cyhal.h"
 #include "cybsp.h"
-#ifdef CY_BMI_270_IMU_I2C
+#ifdef IM_BMI_270_IMU_I2C
 #include "mtb_bmi270.h"
-#elif CY_BMX_160_IMU_SPI
+#elif IM_BMX_160_IMU_SPI
 #include "mtb_bmx160.h"
 #else
 #include "mtb_bmi160.h"
@@ -55,20 +55,13 @@
 /*******************************************************************************
 * Macros
 *******************************************************************************/
-#ifdef CY_BMX_160_IMU_SPI
-    #define IMU_SPI_FREQUENCY 10000000
-#endif
-
-#ifdef CY_BMI_160_IMU_SPI
-    #define IMU_SPI_FREQUENCY 10000000
-#endif
 
 #define IMU_SCAN_RATE         50
 #define IMU_TIMER_FREQUENCY   100000
 #define IMU_TIMER_PERIOD      (IMU_TIMER_FREQUENCY/IMU_SCAN_RATE)
 #define IMU_TIMER_PRIORITY    3
 
-#ifdef CY_XSS_BMI270
+#ifdef IM_XSS_BMI270
 #define BMI270_ADDRESS (MTB_BMI270_ADDRESS_SEC)
 #else
 #define BMI270_ADDRESS (MTB_BMI270_ADDRESS_DEFAULT)
@@ -77,35 +70,30 @@
 /*******************************************************************************
 * Global Variables
 *******************************************************************************/
-#ifdef CY_BMX_160_IMU_SPI
+#ifdef IM_BMX_160_IMU_SPI
     /* BMX160 driver structures */
     mtb_bmx160_data_t data;
     mtb_bmx160_t sensor_bmx160;
-
-    /* SPI object for data transmission */
-    cyhal_spi_t spi;
 #endif
 
-#ifdef CY_BMI_160_IMU_SPI
-    /* BMI160 driver structures */
-    mtb_bmi160_data_t data;
-    mtb_bmi160_t sensor_bmi160;
-
-    /* SPI object for data transmission */
-    cyhal_spi_t spi;
-#endif
-
-#ifdef CY_BMI_160_IMU_I2C
+#ifdef IM_BMI_160_IMU_SPI
     /* BMI160 driver structures */
     mtb_bmi160_data_t data;
     mtb_bmi160_t sensor_bmi160;
 #endif
 
-#ifdef CY_BMI_270_IMU_I2C
+#ifdef IM_BMI_160_IMU_I2C
     /* BMI160 driver structures */
+    mtb_bmi160_data_t data;
+    mtb_bmi160_t sensor_bmi160;
+#endif
+
+#ifdef IM_BMI_270_IMU_I2C
+    /* BMI270 driver structures */
     mtb_bmi270_data_t data;
     mtb_bmi270_t sensor_bmi270;
 #endif
+
 /* timer used for getting data */
 cyhal_timer_t imu_timer;
 
@@ -134,30 +122,8 @@ cy_rslt_t imu_timer_init(void);
 cy_rslt_t imu_init(void)
 {
     cy_rslt_t result;
-#ifdef CY_IMU_SPI
-    /* Initialize SPI for IMU communication */
-       result = cyhal_spi_init(&spi, CYBSP_SPI_MOSI, CYBSP_SPI_MISO, CYBSP_SPI_CLK, NC, NULL, 8, CYHAL_SPI_MODE_00_MSB, false);
-       if(CY_RSLT_SUCCESS != result)
-       {
-           return result;
-       }
 
-       /* Set SPI frequency to 10MHz */
-       result = cyhal_spi_set_frequency(&spi, IMU_SPI_FREQUENCY);
-       if(CY_RSLT_SUCCESS != result)
-       {
-           return result;
-       }
-
-       /* Initialize the chip select line */
-       result = cyhal_gpio_init(CYBSP_SPI_CS, CYHAL_GPIO_DIR_OUTPUT, CYHAL_GPIO_DRIVE_STRONG, 1);
-       if(CY_RSLT_SUCCESS != result)
-       {
-           return result;
-       }
-#endif
-
-#ifdef CY_BMX_160_IMU_SPI
+#ifdef IM_BMX_160_IMU_SPI
     /* Initialize the IMU */
     result = mtb_bmx160_init_spi(&sensor_bmx160, &spi, CYBSP_SPI_CS);
     if(CY_RSLT_SUCCESS != result)
@@ -173,7 +139,7 @@ cy_rslt_t imu_init(void)
     bmi160_set_sens_conf(&(sensor_bmx160.sensor1));
 #endif
 
-#ifdef CY_BMI_160_IMU_SPI
+#ifdef IM_BMI_160_IMU_SPI
     /* Initialize the IMU */
     result = mtb_bmi160_init_spi(&sensor_bmi160, &spi, CYBSP_SPI_CS);
     if(CY_RSLT_SUCCESS != result)
@@ -189,7 +155,7 @@ cy_rslt_t imu_init(void)
     bmi160_set_sens_conf(&(sensor_bmi160.sensor));
 #endif
 
-#ifdef CY_BMI_160_IMU_I2C
+#ifdef IM_BMI_160_IMU_I2C
     /* Initialize the IMU */
     result = mtb_bmi160_init_i2c(&sensor_bmi160, &i2c, MTB_BMI160_DEFAULT_ADDRESS);
     if(CY_RSLT_SUCCESS != result)
@@ -212,7 +178,7 @@ cy_rslt_t imu_init(void)
     bmi160_set_sens_conf(&(sensor_bmi160.sensor));
 #endif
 
-#ifdef CY_BMI_270_IMU_I2C
+#ifdef IM_BMI_270_IMU_I2C
     struct bmi2_sens_config config = {0};
 
     /* Initialize the IMU */
@@ -235,6 +201,7 @@ cy_rslt_t imu_init(void)
     config.cfg.acc.range = BMI2_ACC_RANGE_8G;
     result = bmi2_set_sensor_config(&config, 1, &(sensor_bmi270.sensor));
 #endif
+
     imu_flag = false;
 
     /* Timer for data collection */
@@ -346,31 +313,28 @@ void imu_get_data(float *imu_data)
 {
     /* Read data from IMU sensor */
     cy_rslt_t result;
-#ifdef CY_BMX_160_IMU_SPI
+#ifdef IM_BMX_160_IMU_SPI
     result = mtb_bmx160_read(&sensor_bmx160, &data);
 #endif
-#ifdef CY_BMI_160_IMU_SPI
+#if defined(IM_BMI_160_IMU_SPI) || (IM_BMI_160_IMU_I2C)
     result = mtb_bmi160_read(&sensor_bmi160, &data);
 #endif
-#ifdef CY_BMI_160_IMU_I2C
-    result = mtb_bmi160_read(&sensor_bmi160, &data);
-#endif
-#ifdef CY_BMI_270_IMU_I2C
+#ifdef IM_BMI_270_IMU_I2C
     result = mtb_bmi270_read(&sensor_bmi270, &data);
 #endif
     if (CY_RSLT_SUCCESS == result)
     {
-        #ifdef CY_IMU_SPI
+        #if defined(IM_BMI_160_IMU_SPI) || (IM_BMX_160_IMU_SPI)
             imu_data[0] = ((float)data.accel.y) / (float)0x1000;
             imu_data[1] = ((float)data.accel.x) / (float)0x1000;
             imu_data[2] = ((float)data.accel.z) / (float)0x1000;
         #endif
-        #ifdef CY_IMU_BMI270
+        #if defined(IM_IMU_BMI270) || (IM_XSS_BMI270)
             imu_data[0] = ((float)data.sensor_data.acc.x) / (float)0x1000;
             imu_data[1] = ((float)data.sensor_data.acc.y) / (float)0x1000;
             imu_data[2] = ((float)data.sensor_data.acc.z) / (float)0x1000;
         #endif
-        #ifdef CY_IMU_I2C
+        #ifdef IM_BMI_160_IMU_I2C
             imu_data[0] = ((float)data.accel.x) / (float)0x1000;
             imu_data[1] = ((float)data.accel.y) / (float)0x1000;
             imu_data[2] = ((float)data.accel.z) / (float)0x1000;

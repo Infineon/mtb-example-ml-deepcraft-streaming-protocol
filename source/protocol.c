@@ -76,7 +76,7 @@ static const char* CONFIG_MESSAGE =
         "            \"shape\": [ 1, 3 ],\r\n"
         "            \"rates\": [ 50 ]\r\n"
 #endif
-#if IM_ENABLE_BMM
+#if IM_ENABLE_MAG
         "        },\r\n"
         "        {\r\n"
         "            \"channel\": 3,\r\n"
@@ -90,9 +90,9 @@ static const char* CONFIG_MESSAGE =
         "        {\r\n"
         "            \"channel\": 4,\r\n"
         "            \"type\": \"RADAR\",\r\n"
-        "            \"datatype\": \"f32\",\r\n"
-        "            \"shape\": [ 128, 1 ],\r\n"
-        "            \"rates\": [ 100000 ]\r\n"
+        "            \"datatype\": \"s16\",\r\n"
+        "            \"shape\": [ 1, 2048 ],\r\n"
+        "            \"rates\": [ 16 ]\r\n"
 #endif
 #if IM_ENABLE_DPS
         "        },\r\n"
@@ -101,6 +101,15 @@ static const char* CONFIG_MESSAGE =
         "            \"type\": \"DPS\",\r\n"
         "            \"datatype\": \"f32\",\r\n"
         "            \"shape\": [ 1, 2 ],\r\n"
+        "            \"rates\": [ 50 ]\r\n"
+#endif
+#if IM_ENABLE_GYRO
+        "        },\r\n"
+        "        {\r\n"
+        "            \"channel\": 6,\r\n"
+        "            \"type\": \"gyroscope\",\r\n"
+        "            \"datatype\": \"f32\",\r\n"
+        "            \"shape\": [ 1, 3 ],\r\n"
         "            \"rates\": [ 50 ]\r\n"
 #endif
         "        }\r\n"
@@ -121,6 +130,7 @@ static volatile bool subscribe_imu = false;
 static volatile bool subscribe_bmm = false;
 static volatile bool subscribe_dps = false;
 static volatile bool subscribe_radar = false;
+static volatile bool subscribe_gyro = false;
 static uint32_t last_receive_time = 0;
 
 
@@ -185,6 +195,7 @@ void protocol_repl()
                 subscribe_bmm = false;
                 subscribe_radar = false;
                 subscribe_dps = false;
+                subscribe_gyro = false;
                 streaming_send(CONFIG_MESSAGE, strlen(CONFIG_MESSAGE));
             }
             /* subscribe,1,16000 */
@@ -211,7 +222,7 @@ void protocol_repl()
                 streaming_send(OK_MESSAGE, strlen(OK_MESSAGE));
             }
 #endif
-#if IM_ENABLE_BMM
+#if IM_ENABLE_MAG
             /* subscribe,3,50 */
             else if (strcmp(receive_buffer, "subscribe,3,50") == 0)
             {
@@ -226,7 +237,7 @@ void protocol_repl()
 #endif
 #if IM_ENABLE_RADAR
             /* subscribe,4,100000 */
-            else if (strcmp(receive_buffer, "subscribe,4,100000") == 0)
+            else if (strcmp(receive_buffer, "subscribe,4,16") == 0)
             {
                 subscribe_radar = true;
             }
@@ -250,6 +261,19 @@ void protocol_repl()
                 streaming_send(OK_MESSAGE, strlen(OK_MESSAGE));
             }
 #endif
+#if IM_ENABLE_GYRO
+            /* subscribe,6,50 */
+            else if (strcmp(receive_buffer, "subscribe,6,50") == 0)
+            {
+                subscribe_gyro = true;
+            }
+            /* unsubscribe,6 */
+            else if (strcmp(receive_buffer, "unsubscribe,6") == 0)
+            {
+                subscribe_gyro = false;
+                streaming_send(OK_MESSAGE, strlen(OK_MESSAGE));
+            }
+#endif
             /* unsubscribe */
             else if (strcmp(receive_buffer, "unsubscribe") == 0)
             {
@@ -258,6 +282,7 @@ void protocol_repl()
                 subscribe_bmm = false;
                 subscribe_radar = false;
                 subscribe_dps = false;
+                subscribe_gyro = false;
                 streaming_send(OK_MESSAGE, strlen(OK_MESSAGE));
             }
             /* empty command or heartbeat */
@@ -283,13 +308,14 @@ void protocol_repl()
     }
 
     /* Check receive timeout: If no message for 5 seconds, stop streaming */
-    if ((subscribe_audio || subscribe_imu || subscribe_bmm || subscribe_radar || subscribe_dps) && clock_get_ms() - last_receive_time > HEARTBEAT_TIMEOUT_MS)
+    if ((subscribe_audio || subscribe_imu || subscribe_bmm || subscribe_radar || subscribe_dps || subscribe_gyro) && clock_get_ms() - last_receive_time > HEARTBEAT_TIMEOUT_MS)
     {
         subscribe_audio = false;
         subscribe_imu = false;
         subscribe_bmm = false;
         subscribe_radar = false;
         subscribe_dps = false;
+        subscribe_gyro = false;
     }
 }
 
@@ -345,6 +371,14 @@ void protocol_send(uint8_t channel, const uint8_t* data, size_t size)
         break;
     case PROTOCOL_DPS_CHANNEL:
         if (subscribe_dps)
+        {
+            streaming_send(header, 2);
+            streaming_send(data, size);
+            streaming_send(CRLF, 2);
+        }
+        break;
+    case PROTOCOL_GYRO_CHANNEL:
+        if (subscribe_gyro)
         {
             streaming_send(header, 2);
             streaming_send(data, size);

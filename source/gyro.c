@@ -1,7 +1,7 @@
 /******************************************************************************
-* File Name:   dps.c
+* File Name:   gyro.c
 *
-* Description: This file implements the interface with the Pressure sensor, as
+* Description: This file implements the interface with the motion sensor to, as
 *              a timer to feed the pre-processor at 50Hz.
 *
 * Related Document: See README.md
@@ -39,45 +39,77 @@
 * so agrees to indemnify Cypress against all liability.
 *******************************************************************************/
 
+#include "gyro.h"
 #include "cyhal.h"
 #include "cybsp.h"
+#ifdef IM_BMI_270_IMU_I2C
+#include "mtb_bmi270.h"
+#elif IM_BMX_160_IMU_SPI
+#include "mtb_bmx160.h"
+#else
+#include "mtb_bmi160.h"
+#endif
 #include "config.h"
-#include "xensiv_dps3xx_mtb.h"
-#include "dps.h"
+
 
 /*******************************************************************************
 * Macros
 *******************************************************************************/
-#define DPS_SCAN_RATE         50
-#define DPS_TIMER_FREQUENCY   100000
-#define DPS_TIMER_PERIOD      (DPS_TIMER_FREQUENCY/DPS_SCAN_RATE)
-#define DPS_TIMER_PRIORITY    6
-#ifdef IM_XSS_DPS368
-#define DPS368_ADDRESS (XENSIV_DPS3XX_I2C_ADDR_ALT)
+
+#define GYRO_SCAN_RATE         50
+#define GYRO_TIMER_FREQUENCY   100000
+#define GYRO_TIMER_PERIOD      (GYRO_TIMER_FREQUENCY/GYRO_SCAN_RATE)
+#define GYRO_TIMER_PRIORITY    5
+
+#ifdef IM_XSS_BMI270
+#define BMI270_ADDRESS (MTB_BMI270_ADDRESS_SEC)
 #else
-#define DPS368_ADDRESS (XENSIV_DPS3XX_I2C_ADDR_DEFAULT)
+#define BMI270_ADDRESS (MTB_BMI270_ADDRESS_DEFAULT)
 #endif
 
 /*******************************************************************************
 * Global Variables
 *******************************************************************************/
-xensiv_dps3xx_t pressure_sensor;
+#ifdef IM_BMX_160_IMU_SPI
+    /* BMX160 driver structures */
+    mtb_bmx160_data_t data_gyro;
+    mtb_bmx160_t sensor_gyro;
+#endif
+
+#ifdef IM_BMI_160_IMU_SPI
+    /* BMI160 driver structures */
+    mtb_bmi160_data_t data_gyro;
+    mtb_bmi160_t sensor_gyro;
+#endif
+
+#ifdef IM_BMI_160_IMU_I2C
+    /* BMI160 driver structures */
+    mtb_bmi160_data_t data_gyro;
+    mtb_bmi160_t sensor_gyro;
+#endif
+
+#ifdef IM_BMI_270_IMU_I2C
+    /* BMI270 driver structures */
+    mtb_bmi270_data_t data_gyro;
+    mtb_bmi270_t sensor_gyro;
+#endif
+
 /* timer used for getting data */
-cyhal_timer_t dps_timer;
+cyhal_timer_t gyro_timer;
 
 /*******************************************************************************
 * Function Prototypes
 *******************************************************************************/
-void dps_timer_intr_handler(void* callback_arg, cyhal_timer_event_t event);
-cy_rslt_t dps_timer_init(void);
+void gyro_interrupt_handler(void* callback_arg, cyhal_timer_event_t event);
+cy_rslt_t gyro_timer_init(void);
 
 
 /*******************************************************************************
-* Function Name: dps_init
+* Function Name: gyro_init
 ********************************************************************************
 * Summary:
-*    A function used to initialize the DPS368 Pressure sensor. Starts a timer 
-*    that triggers an interrupt at 50Hz.
+*    A function used to initialize the gyroscope based on the shield selected in the
+*    makefile. Starts a timer that triggers an interrupt at 50Hz.
 *
 * Parameters:
 *   None
@@ -87,38 +119,104 @@ cy_rslt_t dps_timer_init(void);
 *
 *
 *******************************************************************************/
-cy_rslt_t dps_init(void)
+cy_rslt_t gyro_init(void)
 {
     cy_rslt_t result;
-    xensiv_dps3xx_config_t config;
-    /* Initialize pressure sensor */
-    result = xensiv_dps3xx_mtb_init_i2c(&pressure_sensor, &i2c, DPS368_ADDRESS);
-    if (result != CY_RSLT_SUCCESS)
-    {
-        CY_ASSERT(0);
-    }
-    result = xensiv_dps3xx_get_config(&pressure_sensor, &config);
-    config.pressure_oversample = XENSIV_DPS3XX_OVERSAMPLE_16;
-    config.pressure_rate = XENSIV_DPS3XX_RATE_16;
-    result = xensiv_dps3xx_set_config(&pressure_sensor, &config);
-    result = xensiv_dps3xx_get_config(&pressure_sensor, &config);
-    config.temperature_oversample = XENSIV_DPS3XX_OVERSAMPLE_16;
-    config.temperature_rate = XENSIV_DPS3XX_RATE_16;
-    result = xensiv_dps3xx_set_config(&pressure_sensor, &config);
 
-    dps_flag = false;
-    /* Timer for data collection */
-    result = dps_timer_init();
+#ifdef IM_BMX_160_IMU_SPI
+    /* Initialize the IMU */
+    result = mtb_bmx160_init_spi(&sensor_gyro, &spi, CYBSP_SPI_CS);
     if(CY_RSLT_SUCCESS != result)
     {
         return result;
     }
+
+    /* Set the output data rate and range of the gyroscope */
+    sensor_gyro.sensor1.gyro_cfg.odr = IMU_SAMPLE_RATE;
+    sensor_gyro.sensor1.gyro_cfg.range = IMU_SAMPLE_RANGE;
+
+    /* Set the sensor configuration */
+    bmi160_set_sens_conf(&(sensor_gyro.sensor1));
+#endif
+
+#ifdef IM_BMI_160_IMU_SPI
+    /* Initialize the IMU */
+    result = mtb_bmi160_init_spi(&sensor_gyro, &spi, CYBSP_SPI_CS);
+    if(CY_RSLT_SUCCESS != result)
+    {
+        return result;
+    }
+
+    /* Set the output data rate and range of the gyroscope */
+    sensor_gyro.sensor.gyro_cfg.odr = IMU_SAMPLE_RATE;
+    sensor_gyro.sensor.gyro_cfg.range = IMU_SAMPLE_RANGE;
+
+    /* Set the sensor configuration */
+    bmi160_set_sens_conf(&(sensor_gyro.sensor));
+#endif
+
+#ifdef IM_BMI_160_IMU_I2C
+    /* Initialize the IMU */
+    result = mtb_bmi160_init_i2c(&sensor_gyro, &i2c, MTB_BMI160_DEFAULT_ADDRESS);
+    if(CY_RSLT_SUCCESS != result)
+    {
+        return result;
+    }
+
+    /* Set the default configuration for the BMI160 */
+    result = mtb_bmi160_config_default(&sensor_gyro);
+    if(CY_RSLT_SUCCESS != result)
+    {
+        return result;
+    }
+
+    /* Set the output data rate and range of the gyroscope */
+    sensor_gyro.sensor.gyro_cfg.odr = IMU_SAMPLE_RATE;
+    sensor_gyro.sensor.gyro_cfg.range = IMU_SAMPLE_RANGE;
+
+    /* Set the sensor configuration */
+    bmi160_set_sens_conf(&(sensor_gyro.sensor));
+#endif
+
+#ifdef IM_BMI_270_IMU_I2C
+    struct bmi2_sens_config config = {0};
+
+    /* Initialize the gyro */
+    result = mtb_bmi270_init_i2c(&sensor_gyro, &i2c, BMI270_ADDRESS);
+    if(CY_RSLT_SUCCESS != result)
+    {
+        return result;
+    }
+
+    /* Set the default configuration for the BMI270 */
+    result = mtb_bmi270_config_default(&sensor_gyro);
+    if(CY_RSLT_SUCCESS != result)
+    {
+        return result;
+    }
+
+    /* Set the output data rate and range of the gyroscope */
+    config.type = BMI2_GYRO;
+    config.cfg.gyr.odr = BMI2_GYR_ODR_50HZ;
+    config.cfg.gyr.range = BMI2_GYR_RANGE_500;
+    result = bmi2_set_sensor_config(&config, 1, &(sensor_gyro.sensor));
+#endif
+
+    gyro_flag = false;
+
+    /* Timer for data collection */
+    result = gyro_timer_init();
+    if(CY_RSLT_SUCCESS != result)
+    {
+        return result;
+    }
+
     return CY_RSLT_SUCCESS;
 }
 
 
 /*******************************************************************************
-* Function Name: dps_timer_init
+* Function Name: gyro_timer_init
 ********************************************************************************
 * Summary:
 *   Sets up an interrupt that triggers at the desired frequency.
@@ -128,13 +226,13 @@ cy_rslt_t dps_init(void)
 *
 *
 *******************************************************************************/
-cy_rslt_t dps_timer_init(void)
+cy_rslt_t gyro_timer_init(void)
 {
     cy_rslt_t rslt;
     const cyhal_timer_cfg_t timer_cfg =
     {
         .compare_value = 0,                 /* Timer compare value, not used */
-        .period = DPS_TIMER_PERIOD,         /* Defines the timer period */
+        .period = GYRO_TIMER_PERIOD,        /* Defines the timer period */
         .direction = CYHAL_TIMER_DIR_UP,    /* Timer counts up */
         .is_compare = false,                /* Don't use compare mode */
         .is_continuous = true,              /* Run the timer indefinitely */
@@ -142,35 +240,33 @@ cy_rslt_t dps_timer_init(void)
     };
 
     /* Initialize the timer object. Does not use pin output ('pin' is NC) and
-    * does not use a pre-configured clock source ('clk' is NULL). */
-    rslt = cyhal_timer_init(&dps_timer, NC, NULL);
+     * does not use a pre-configured clock source ('clk' is NULL). */
+    rslt = cyhal_timer_init(&gyro_timer, NC, NULL);
     if (CY_RSLT_SUCCESS != rslt)
     {
         return rslt;
     }
 
     /* Apply timer configuration such as period, count direction, run mode, etc. */
-    rslt = cyhal_timer_configure(&dps_timer, &timer_cfg);
+    rslt = cyhal_timer_configure(&gyro_timer, &timer_cfg);
     if (CY_RSLT_SUCCESS != rslt)
     {
         return rslt;
     }
 
     /* Set the frequency of timer to 100KHz */
-    rslt = cyhal_timer_set_frequency(&dps_timer, DPS_TIMER_FREQUENCY);
+    rslt = cyhal_timer_set_frequency(&gyro_timer, GYRO_TIMER_FREQUENCY);
     if (CY_RSLT_SUCCESS != rslt)
     {
         return rslt;
     }
 
     /* Assign the ISR to execute on timer interrupt */
-    cyhal_timer_register_callback(&dps_timer, dps_timer_intr_handler, NULL);
-
+    cyhal_timer_register_callback(&gyro_timer, gyro_interrupt_handler, NULL);
     /* Set the event on which timer interrupt occurs and enable it */
-    cyhal_timer_enable_event(&dps_timer, CYHAL_TIMER_IRQ_TERMINAL_COUNT, DPS_TIMER_PRIORITY, true);
-    
+    cyhal_timer_enable_event(&gyro_timer, CYHAL_TIMER_IRQ_TERMINAL_COUNT, GYRO_TIMER_PRIORITY, true);
     /* Start the timer with the configured settings */
-    rslt = cyhal_timer_start(&dps_timer);
+    rslt = cyhal_timer_start(&gyro_timer);
     if (CY_RSLT_SUCCESS != rslt)
     {
         return rslt;
@@ -181,7 +277,7 @@ cy_rslt_t dps_timer_init(void)
 
 
 /*******************************************************************************
-* Function Name: dps_timer_intr_handler
+* Function Name: gyro_interrupt_handler
 ********************************************************************************
 * Summary:
 *   Interrupt handler for timer. Interrupt handler will get called at 50Hz and
@@ -193,36 +289,56 @@ cy_rslt_t dps_timer_init(void)
 *
 *
 *******************************************************************************/
-void dps_timer_intr_handler(void *callback_arg, cyhal_timer_event_t event)
+void gyro_interrupt_handler(void *callback_arg, cyhal_timer_event_t event)
 {
     (void) callback_arg;
     (void) event;
 
-    dps_flag = true;
+    gyro_flag = true;
 }
 
 
 /*******************************************************************************
-* Function Name: dps_get_data
+* Function Name: gyro_get_data
 ********************************************************************************
 * Summary:
-*   Reads data from the Pressure sensor and stores it in a buffer.
+*   Reads gyroscope data and stores it in a buffer.
 *
 * Parameters:
-*     dps_data: Stores Pressure sensor data
+*     gyro_data: Stores gyroscope data
 *
 *
 *******************************************************************************/
-cy_rslt_t dps_get_data(float *dps_data)
+void gyro_get_data(float *gyro_data)
 {
+    /* Read data from IMU sensor */
     cy_rslt_t result;
-    float pressure;
-    float temperature;
-    result = xensiv_dps3xx_read(&pressure_sensor, &pressure, &temperature);
+#ifdef IM_BMX_160_IMU_SPI
+    result = mtb_bmx160_read(&sensor_gyro, &data_gyro);
+#endif
+#if defined(IM_BMI_160_IMU_SPI) || (IM_BMI_160_IMU_I2C)
+    result = mtb_bmi160_read(&sensor_gyro, &data_gyro);
+#endif
+#ifdef IM_BMI_270_IMU_I2C
+    result = mtb_bmi270_read(&sensor_gyro, &data_gyro);
+#endif
     if (CY_RSLT_SUCCESS == result)
     {
-        dps_data[0] = pressure;
-        dps_data[1] = temperature;
+
+    #if defined(IM_BMI_160_IMU_SPI) || (IM_BMX_160_IMU_SPI)
+        gyro_data[0] = ((float)data_gyro.gyro.y) / (float)0x1000;
+        gyro_data[1] = ((float)data_gyro.gyro.x) / (float)0x1000;
+        gyro_data[2] = ((float)data_gyro.gyro.z) / (float)0x1000;
+    #endif
+    #if defined(IM_IMU_BMI270) || (IM_XSS_BMI270)
+        gyro_data[0] = ((float)data_gyro.sensor_data.gyr.x) / (float)0x1000;
+        gyro_data[1] = ((float)data_gyro.sensor_data.gyr.y) / (float)0x1000;
+        gyro_data[2] = ((float)data_gyro.sensor_data.gyr.z) / (float)0x1000;
+    #endif
+    #ifdef IM_BMI_160_IMU_I2C
+        gyro_data[0] = ((float)data_gyro.gyro.x) / (float)0x1000;
+        gyro_data[1] = ((float)data_gyro.gyro.y) / (float)0x1000;
+        gyro_data[2] = ((float)data_gyro.gyro.z) / (float)0x1000;
+    #endif
     }
-    return result;
 }

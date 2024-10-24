@@ -48,6 +48,7 @@
   #include "imu.h"
 #endif
 #include "bmm.h"
+#include "gyro.h"
 #include "dps.h"
 #include "radar.h"
 #include "protocol.h"
@@ -55,13 +56,21 @@
 /*******************************************************************************
 * Global Variables
 ********************************************************************************/
+
 volatile bool pdm_pcm_flag;
 volatile bool imu_flag;
 volatile bool bmm_flag;
 volatile bool dps_flag;
 volatile bool radar_flag;
+volatile bool gyro_flag;
 cyhal_i2c_t i2c;
+cyhal_spi_t spi;
 
+/*******************************************************************************
+* Macros
+*******************************************************************************/
+
+#define SPI_FREQUENCY      (12000000UL)
 
 /*******************************************************************************
 * Function Name: main
@@ -108,6 +117,38 @@ int main(void)
         return result;
     }
 
+#if defined(IM_BMI_160_IMU_SPI) || (IM_BMX_160_IMU_SPI)
+    result = cyhal_spi_init(&spi, CYBSP_SPI_MOSI, CYBSP_SPI_MISO, CYBSP_SPI_CLK, NC, NULL, 8, CYHAL_SPI_MODE_00_MSB, false);
+    if(CY_RSLT_SUCCESS != result)
+    {
+        return result;
+    }
+    result = cyhal_spi_set_frequency(&spi, SPI_FREQUENCY);
+    if(CY_RSLT_SUCCESS != result)
+    {
+        return result;
+    }
+
+     /* Initialize the chip select line */
+    result = cyhal_gpio_init(CYBSP_SPI_CS, CYHAL_GPIO_DIR_OUTPUT, CYHAL_GPIO_DRIVE_STRONG, 1);
+    if(CY_RSLT_SUCCESS != result)
+    {
+        return result;
+    }
+#endif
+#ifdef IM_ENABLE_RADAR
+    result = cyhal_spi_init(&spi, CYBSP_RSPI_MOSI, CYBSP_RSPI_MISO, CYBSP_RSPI_CLK, NC, NULL, 8, CYHAL_SPI_MODE_00_MSB, false);
+    if(CY_RSLT_SUCCESS != result)
+    {
+      return result;
+    }
+    result = cyhal_spi_set_frequency(&spi, SPI_FREQUENCY);
+    if(CY_RSLT_SUCCESS != result)
+    {
+        return result;
+    }
+#endif
+
     /* Initialize retarget-io to use the debug UART port */
     cy_retarget_io_init(CYBSP_DEBUG_UART_TX, CYBSP_DEBUG_UART_RX, CY_RETARGET_IO_BAUDRATE);
 
@@ -134,7 +175,7 @@ int main(void)
     result = pdm_init();
 
 #ifdef IM_ENABLE_IMU
-    /* Initialize IMU transmit buffers */
+    /* Initialize  accelerometer transmit buffers */
     uint8_t transmit_imu[4 * IMU_AXIS] = {0};
     float *imu_raw_data = (float*) transmit_imu;
 
@@ -142,8 +183,17 @@ int main(void)
     result = imu_init();
 #endif
 
-#ifdef IM_ENABLE_BMM
-    /* Initialize IMU transmit buffers */
+#ifdef IM_ENABLE_GYRO
+    /* Initialize gyroscope transmit buffers */
+    uint8_t transmit_gyro[4 * GYRO_AXIS] = {0};
+    float *gyro_raw_data = (float*) transmit_gyro;
+
+    /* Start the imu and timer */
+    result = gyro_init();
+#endif
+
+#ifdef IM_ENABLE_MAG
+    /* Initialize magnetometer transmit buffers */
     uint8_t transmit_bmm[4 * BMM_AXIS] = {0};
     float *bmm_raw_data = (float*) transmit_bmm;
 
@@ -153,7 +203,7 @@ int main(void)
 
 #ifdef IM_ENABLE_DPS
     int8 val = 0;
-    /* Initialize DPS transmit buffers */
+    /* Initialize pressure transmit buffers */
     uint8_t transmit_dps[4 * DPS_AXIS] = {0};
     float *dps_raw_data = (float*) transmit_dps;
     /* Configure DPS sensor */
@@ -181,26 +231,37 @@ int main(void)
         /* Handle incoming characters */
         protocol_repl();
 
-        /* Transmit IMU data and PDM data */
+        /* Transmit data */
 #if IM_ENABLE_IMU
         if (true == imu_flag)
         {
             imu_flag = false;
-            /* Store IMU data */
+            /* Store accelerometer data */
             imu_get_data(imu_raw_data);
             /* Transmit data */
             protocol_send(PROTOCOL_IMU_CHANNEL, transmit_imu, sizeof(transmit_imu));
         }
 #endif
 
-#ifdef IM_ENABLE_BMM
+#ifdef IM_ENABLE_GYRO
+        if (true == gyro_flag)
+        {
+            gyro_flag = false;
+            /* Store gyroscope data */
+            gyro_get_data(gyro_raw_data);
+            /* Transmit data */
+            protocol_send(PROTOCOL_GYRO_CHANNEL, transmit_gyro, sizeof(transmit_gyro));
+        }
+#endif
+
+#ifdef IM_ENABLE_MAG
         if(true == bmm_flag)
         {
             bmm_flag = false;
-            /* Store IMU data */
+            /* Store magnetometer data */
             bmm350_get_data(bmm_raw_data);
 
-            /* Transmit data over UART */
+            /* Transmit data */
             protocol_send(PROTOCOL_BMM_CHANNEL, transmit_bmm, sizeof(transmit_bmm));
         }
 #endif
@@ -213,7 +274,7 @@ int main(void)
             val = dps_get_data(dps_raw_data);
             if(CY_RSLT_SUCCESS == val)
             {
-                /* Transmit data over UART */
+                /* Transmit data */
                 protocol_send(PROTOCOL_DPS_CHANNEL, transmit_dps, sizeof(transmit_dps));
             }
         }
@@ -223,7 +284,7 @@ int main(void)
         if (true == radar_flag)
         {
             radar_flag = false;
-            /* Store IMU data */
+            /* Store radar data */
             radar_get_data(radar_raw_data);
             /* Transmit data */
             protocol_send(PROTOCOL_RADAR_CHANNEL, transmit_radar, sizeof(transmit_radar));

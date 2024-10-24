@@ -45,8 +45,8 @@
 /******************************************************************************
  * Constants
  *****************************************************************************/
-/* Enabling or disabling the IMU is now in Makefile SHIELD_DATA_COLLECTION. */
 extern cyhal_i2c_t i2c;
+extern cyhal_spi_t spi;
 
 /* Set IMU_SAMPLE_RATE to one of the following
  * BMI160_ACCEL_ODR_400HZ / BMI2_ACC_ODR_400HZ

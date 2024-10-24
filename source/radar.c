@@ -48,12 +48,11 @@
 #include "cy_pdl.h"
 #include "xensiv_bgt60trxx_mtb.h"
 #include "radar_settings.h"
+#include "config.h"
 
 /*******************************************************************************
 * Macros
 *******************************************************************************/
-
-#define XENSIV_BGT60TRXX_SPI_FREQUENCY      (12000000UL)
 
 #define NUM_SAMPLES_PER_FRAME               (XENSIV_BGT60TRXX_CONF_NUM_SAMPLES_PER_CHIRP *\
                                              XENSIV_BGT60TRXX_CONF_NUM_CHIRPS_PER_FRAME *\
@@ -61,16 +60,15 @@
 
 #define NUM_CHIRPS_PER_FRAME                XENSIV_BGT60TRXX_CONF_NUM_CHIRPS_PER_FRAME
 #define NUM_SAMPLES_PER_CHIRP               XENSIV_BGT60TRXX_CONF_NUM_SAMPLES_PER_CHIRP
-#define RADAR_SCAN_RATE                     100000
+#define RADAR_SCAN_RATE                     16
 #define RADAR_TIMER_FREQUENCY               100000
 #define RADAR_TIMER_PERIOD                  (RADAR_TIMER_FREQUENCY/RADAR_SCAN_RATE)
-#define RADAR_TIMER_PRIORITY                3
+#define RADAR_TIMER_PRIORITY                7
 
 /*******************************************************************************
 * Global Variables
 *******************************************************************************/
 #ifdef IM_ENABLE_RADAR
-static cyhal_spi_t spi_obj;
 static xensiv_bgt60trxx_mtb_t bgt60_obj;
 #endif
 uint16_t bgt60_buffer[NUM_SAMPLES_PER_FRAME] __attribute__((aligned(2)));
@@ -104,36 +102,16 @@ cy_rslt_t radar_init(void)
 {
     cy_rslt_t result;
 #ifdef IM_ENABLE_RADAR
-    if (cyhal_spi_init(&spi_obj,
-                           PIN_XENSIV_BGT60TRXX_SPI_MOSI,
-                           PIN_XENSIV_BGT60TRXX_SPI_MISO,
-                           PIN_XENSIV_BGT60TRXX_SPI_SCLK,
-                           NC,
-                           NULL,
-                           8,
-                           CYHAL_SPI_MODE_00_MSB,
-                           false) != CY_RSLT_SUCCESS)
-        {
-            printf("ERROR: cyhal_spi_init failed\n");
-            return -1;
-        }
         /* Reduce drive strength to improve EMI */
-        Cy_GPIO_SetSlewRate(CYHAL_GET_PORTADDR(PIN_XENSIV_BGT60TRXX_SPI_MOSI), CYHAL_GET_PIN(PIN_XENSIV_BGT60TRXX_SPI_MOSI), CY_GPIO_SLEW_FAST);
-        Cy_GPIO_SetDriveSel(CYHAL_GET_PORTADDR(PIN_XENSIV_BGT60TRXX_SPI_MOSI), CYHAL_GET_PIN(PIN_XENSIV_BGT60TRXX_SPI_MOSI), CY_GPIO_DRIVE_1_8);
-        Cy_GPIO_SetSlewRate(CYHAL_GET_PORTADDR(PIN_XENSIV_BGT60TRXX_SPI_SCLK), CYHAL_GET_PIN(PIN_XENSIV_BGT60TRXX_SPI_SCLK), CY_GPIO_SLEW_FAST);
-        Cy_GPIO_SetDriveSel(CYHAL_GET_PORTADDR(PIN_XENSIV_BGT60TRXX_SPI_SCLK), CYHAL_GET_PIN(PIN_XENSIV_BGT60TRXX_SPI_SCLK), CY_GPIO_DRIVE_1_8);
-
-        /* Set the data rate to 25 Mbps */
-        if (cyhal_spi_set_frequency(&spi_obj, XENSIV_BGT60TRXX_SPI_FREQUENCY) != CY_RSLT_SUCCESS)
-        {
-            printf("ERROR: cyhal_spi_set_frequency failed\n");
-            return -1;
-        }
+        Cy_GPIO_SetSlewRate(CYHAL_GET_PORTADDR(CYBSP_RSPI_MOSI), CYHAL_GET_PIN(CYBSP_RSPI_MOSI), CY_GPIO_SLEW_FAST);
+        Cy_GPIO_SetDriveSel(CYHAL_GET_PORTADDR(CYBSP_RSPI_MOSI), CYHAL_GET_PIN(CYBSP_RSPI_MOSI), CY_GPIO_DRIVE_1_8);
+        Cy_GPIO_SetSlewRate(CYHAL_GET_PORTADDR(CYBSP_RSPI_CLK), CYHAL_GET_PIN(CYBSP_RSPI_CLK), CY_GPIO_SLEW_FAST);
+        Cy_GPIO_SetDriveSel(CYHAL_GET_PORTADDR(CYBSP_RSPI_CLK), CYHAL_GET_PIN(CYBSP_RSPI_CLK), CY_GPIO_DRIVE_1_8);
 
         if (xensiv_bgt60trxx_mtb_init(&bgt60_obj,
-                                      &spi_obj,
-                                      PIN_XENSIV_BGT60TRXX_SPI_CSN,
-                                      PIN_XENSIV_BGT60TRXX_RSTN,
+                                      &spi,
+                                      CYBSP_RSPI_CS,
+                                      CYBSP_RXRES_L,
                                       register_lst,
                                       XENSIV_BGT60TRXX_CONF_NUM_REGS) != CY_RSLT_SUCCESS)
         {

@@ -1,10 +1,11 @@
 /******************************************************************************
-* File Name: resource_map.h
+* File Name:   gyro.h
 *
-* Description: This file defines the SPI and GPIO pin map for all the supported 
-*              kits.
+* Description: This file contains the function prototypes and constants used
+*   in gyro.c.
 *
 * Related Document: See README.md
+*
 *
 *******************************************************************************
 * Copyright 2024, Cypress Semiconductor Corporation (an Infineon company) or
@@ -39,19 +40,26 @@
 * so agrees to indemnify Cypress against all liability.
 *******************************************************************************/
 
-#ifndef RESOURCE_MAP_H_
-#define RESOURCE_MAP_H_
-#include "cybsp.h"
+#ifndef SOURCE_GYRO_H_
+#define SOURCE_GYRO_H_
 
-#ifdef IM_ENABLE_RADAR
+#include "cy_result.h"
+#include "stdbool.h"
+/******************************************************************************
+ * Global Variables
+ *****************************************************************************/
+extern volatile bool gyro_flag;
 
-#define PIN_XENSIV_BGT60TRXX_SPI_SCLK       CYBSP_RSPI_CLK
-#define PIN_XENSIV_BGT60TRXX_SPI_MOSI       CYBSP_RSPI_MOSI
-#define PIN_XENSIV_BGT60TRXX_SPI_MISO       CYBSP_RSPI_MISO
-#define PIN_XENSIV_BGT60TRXX_SPI_CSN        CYBSP_RSPI_CS
-#define PIN_XENSIV_BGT60TRXX_IRQ            CYBSP_RSPI_IRQ
-#define PIN_XENSIV_BGT60TRXX_RSTN           CYBSP_RXRES_L
+/******************************************************************************
+ * Macros
+ *****************************************************************************/
+#define GYRO_AXIS 3
 
-#endif
+/*******************************************************************************
+* Function Prototypes
+*******************************************************************************/
+cy_rslt_t gyro_init(void);
+void gyro_get_data(float *imu_data);
 
-#endif 
+
+#endif /* SOURCE_GYRO_H_ */
