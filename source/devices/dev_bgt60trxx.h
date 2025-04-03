@@ -1,7 +1,10 @@
 /******************************************************************************
-* File Name:   clock.h
+* File Name:   dev_bgt60trxx.h
 *
-* Description: This file provides a clock.
+* Description: This file contains the function prototypes and constants used
+*   in dev_bgt60trxx.c.
+*
+* Related Document: See README.md
 *
 *******************************************************************************
 * Copyright 2024-2025, Cypress Semiconductor Corporation (an Infineon company) or
@@ -36,37 +39,18 @@
 * so agrees to indemnify Cypress against all liability.
 *******************************************************************************/
 
-#ifndef _CLOCK_H_
-#define _CLOCK_H_
+#ifndef _DEV_BGT60TRXX_H_
+#define _DEV_BGT60TRXX_H_
 
-#include <stdint.h>
+#include <stdbool.h>
+#include <cyhal_hw_types.h>
+#include "protocol/protocol.h"
 
-/*******************************************************************************
-* Types
-*******************************************************************************/
-
-/* uint32_t will wrap around every 12 hour if CLOCK_TICK_PER_SECOND equals 100000.
- * To avoid this change clock_tick_t to uint64_t.
- */
-typedef uint64_t clock_tick_t;
-
-/*******************************************************************************
-* Defines
-*******************************************************************************/
-
-/* Number of counts per second */
-#define CLOCK_TICK_PER_SECOND 100000
-
-/* Interrupt Priority Level  */
-#define CLOCK_INTERRUPT_PRIORITY  3
 
 /*******************************************************************************
 * Function Prototypes
 *******************************************************************************/
 
-bool clock_init(void);
-clock_tick_t clock_get_tick();
+bool dev_bgt60trxx_register(protocol_t* protocol, cyhal_spi_t* spi);
 
-#endif /* _CLOCK_H_ */
-
-/* [] END OF FILE */
+#endif /* _DEV_BGT60TRXX_H_ */

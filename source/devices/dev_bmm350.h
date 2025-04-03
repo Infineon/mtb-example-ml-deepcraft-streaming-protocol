@@ -1,7 +1,9 @@
 /******************************************************************************
-* File Name:   clock.h
+* File Name: dev_bmm350.h
 *
-* Description: This file provides a clock.
+* Description: Header file for the magnetometer sensor interface.
+*
+* Related Document: See README.md
 *
 *******************************************************************************
 * Copyright 2024-2025, Cypress Semiconductor Corporation (an Infineon company) or
@@ -35,38 +37,20 @@
 * of such system or application assumes all risk of such use and in doing
 * so agrees to indemnify Cypress against all liability.
 *******************************************************************************/
+#ifndef _DEV_BMM350_H_
+#define _DEV_BMM350_H_
 
-#ifndef _CLOCK_H_
-#define _CLOCK_H_
+#include <stdbool.h>
+#include <cyhal_hw_types.h>
 
-#include <stdint.h>
-
-/*******************************************************************************
-* Types
-*******************************************************************************/
-
-/* uint32_t will wrap around every 12 hour if CLOCK_TICK_PER_SECOND equals 100000.
- * To avoid this change clock_tick_t to uint64_t.
- */
-typedef uint64_t clock_tick_t;
-
-/*******************************************************************************
-* Defines
-*******************************************************************************/
-
-/* Number of counts per second */
-#define CLOCK_TICK_PER_SECOND 100000
-
-/* Interrupt Priority Level  */
-#define CLOCK_INTERRUPT_PRIORITY  3
+#include "protocol/protocol.h"
 
 /*******************************************************************************
 * Function Prototypes
 *******************************************************************************/
 
-bool clock_init(void);
-clock_tick_t clock_get_tick();
+bool dev_bmm350_register(protocol_t* protocol, cyhal_i2c_t* i2c);
 
-#endif /* _CLOCK_H_ */
+#endif /* _DEV_BMM350_H_ */
 
 /* [] END OF FILE */

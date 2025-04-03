@@ -1,13 +1,13 @@
 /******************************************************************************
 * File Name:   main.c
 *
-* Description: This is the source code for the Imagimob Streaming Protocol
-*              Example for ModusToolbox.
+* Description: Implementation of Tensor Streaming Protocol firmware for PSOC 6.
 *
-* Related Document: See README.md
+* Related Document:
+*    See README.md and https://bitbucket.org/imagimob/tensor-streaming-protocol
 *
 *******************************************************************************
-* Copyright 2024, Cypress Semiconductor Corporation (an Infineon company) or
+* Copyright 2024-2025, Cypress Semiconductor Corporation (an Infineon company) or
 * an affiliate of Cypress Semiconductor Corporation.  All rights reserved.
 *
 * This software, including source code, documentation and related
@@ -39,266 +39,140 @@
 * so agrees to indemnify Cypress against all liability.
 *******************************************************************************/
 
-#include "cyhal.h"
-#include "cybsp.h"
-#include "cy_retarget_io.h"
-#include "stdlib.h"
-#include "audio.h"
-#ifdef IM_ENABLE_IMU
-  #include "imu.h"
-#endif
-#include "bmm.h"
-#include "gyro.h"
-#include "dps.h"
-#include "radar.h"
-#include "protocol.h"
+#include <string.h>
+#include <stdlib.h>
+#include <inttypes.h>
+#include <cyhal.h>
+#include <stdio.h>
 
-/*******************************************************************************
-* Global Variables
-********************************************************************************/
-
-volatile bool pdm_pcm_flag;
-volatile bool imu_flag;
-volatile bool bmm_flag;
-volatile bool dps_flag;
-volatile bool radar_flag;
-volatile bool gyro_flag;
-cyhal_i2c_t i2c;
-cyhal_spi_t spi;
-
-/*******************************************************************************
-* Macros
-*******************************************************************************/
-
-#define SPI_FREQUENCY      (12000000UL)
+#include "protocol/protocol.h"
+#include "usbd.h"
+#include "build.h"
+#include "common.h"
+#include "clock.h"
+#include "board.h"
+#include "system.h"
+#include "watchdog.h"
 
 /*******************************************************************************
 * Function Name: main
 ********************************************************************************
 * Summary:
-*  This is the main function. It sets up either the PDM or IMU based on the
-*  config.h file. main continuously checks flags, signaling that data is ready
-*  to be streamed over UART or USB and initiates the transfer.
+*  This is the main function. It never returns.
 *
 *******************************************************************************/
 int main(void)
 {
-    cy_rslt_t result;
+    uint32_t clock_hz;
 
-    /* I2C config structure */
-    cyhal_i2c_cfg_t i2c_config =
-    {
-         .is_slave = false,
-         .address = 0,
-         .frequencyhal_hz = 400000
-    };
+    /* Base system initialization  */
+    board_init_system();
 
-    /* Initialize the device and board peripherals */
-    result = cybsp_init() ;
-    if (result != CY_RSLT_SUCCESS)
-    {
-        CY_ASSERT(0);
-    }
+    /* Override the base PLL clocks and routing. */
+    board_set_clocks();
 
-    /* Enable global interrupts */
-    __enable_irq();
-    
-    /* Initialize I2C for IMU communication */
-    result = cyhal_i2c_init(&i2c, CYBSP_I2C_SDA, CYBSP_I2C_SCL, NULL);
-    if(CY_RSLT_SUCCESS != result)
+    /* Start clock */
+    if(!clock_init())
     {
-        return result;
+        halt_error(LED_CODE_CLOCK_ERROR);
     }
-
-    /* Configure the I2C */
-    result = cyhal_i2c_configure(&i2c, &i2c_config);
-    if(CY_RSLT_SUCCESS != result)
-    {
-        return result;
-    }
-
-#if defined(IM_BMI_160_IMU_SPI) || (IM_BMX_160_IMU_SPI)
-    result = cyhal_spi_init(&spi, CYBSP_SPI_MOSI, CYBSP_SPI_MISO, CYBSP_SPI_CLK, NC, NULL, 8, CYHAL_SPI_MODE_00_MSB, false);
-    if(CY_RSLT_SUCCESS != result)
-    {
-        return result;
-    }
-    result = cyhal_spi_set_frequency(&spi, SPI_FREQUENCY);
-    if(CY_RSLT_SUCCESS != result)
-    {
-        return result;
-    }
-
-     /* Initialize the chip select line */
-    result = cyhal_gpio_init(CYBSP_SPI_CS, CYHAL_GPIO_DIR_OUTPUT, CYHAL_GPIO_DRIVE_STRONG, 1);
-    if(CY_RSLT_SUCCESS != result)
-    {
-        return result;
-    }
-#endif
-#ifdef IM_ENABLE_RADAR
-    result = cyhal_spi_init(&spi, CYBSP_RSPI_MOSI, CYBSP_RSPI_MISO, CYBSP_RSPI_CLK, NC, NULL, 8, CYHAL_SPI_MODE_00_MSB, false);
-    if(CY_RSLT_SUCCESS != result)
-    {
-      return result;
-    }
-    result = cyhal_spi_set_frequency(&spi, SPI_FREQUENCY);
-    if(CY_RSLT_SUCCESS != result)
-    {
-        return result;
-    }
-#endif
 
     /* Initialize retarget-io to use the debug UART port */
-    cy_retarget_io_init(CYBSP_DEBUG_UART_TX, CYBSP_DEBUG_UART_RX, CY_RETARGET_IO_BAUDRATE);
+    if(!board_enable_debug_console())
+    {
+        halt_error(LED_CODE_STDOUT_RETARGET_ERROR);
+    }
 
+    /* Firmware version */
+    protocol_Version firmware_version = {
+        .major = 1,
+        .minor = 2,
+        .build = BUILD_DATE,
+        .revision = BUILD_TIME
+    };
+
+    /* Serial UUID */
+    uint8_t* serial = board_get_serial_uuid();
+
+    /* Create a protocol instance */
+    protocol_t* protocol = protocol_create("PSOC 6 AI (CY8CKIT-06S2-AI)", serial, firmware_version);
+
+    /* Add reset function */
+    protocol->board_reset = board_reset;
+
+    /* Debug console print */
     printf("\x1b[2J\x1b[;H");
+    printf("*********** Firmware Debug Console ***********\n\n");
+    printf("Board Name             : %s\r\n", protocol->board.name);
+    printf("Board Serial           : %02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X\n",
+        serial[0], serial[1], serial[2], serial[3],
+        serial[4], serial[5],
+        serial[6], serial[7],
+        serial[8], serial[9],
+        serial[10], serial[11], serial[12], serial[13], serial[14], serial[15]);
+    printf("Firmware Version       : %" PRIu32 ".%" PRIu32 ".%" PRIu32 ".%" PRIu32 "\n\n",
+        protocol->board.firmware_version.major,
+        protocol->board.firmware_version.minor,
+        protocol->board.firmware_version.build,
+        protocol->board.firmware_version.revision);
+    printf("Protocol Version       : %" PRIu32 ".%" PRIu32 ".%" PRIu32 ".%" PRIu32 "\n\n",
+        protocol->board.protocol_version.major,
+        protocol->board.protocol_version.minor,
+        protocol->board.protocol_version.build,
+        protocol->board.protocol_version.revision);
 
-    printf("*********** "
-           "PSoC 6 MCU: Imagimob Streaming Protocol"
-           "*********** \r\n\n");
+#ifdef IM_ENABLE_WATCHDOG
+    /* For watchdog auto reset every 3 second...  */
+    if(!watchdog_enable(protocol, 3000))
+    {
+        halt_error(LED_CODE_WATCHDOG_ERROR);
+    }
+#endif
 
-    /* Initialize the User LED */
-    cyhal_gpio_init(CYBSP_USER_LED, CYHAL_GPIO_DIR_OUTPUT, CYHAL_GPIO_DRIVE_STRONG, CYBSP_LED_STATE_OFF);
+    /* Load all device drivers */
+    system_load_device_drivers(protocol);
 
     /* Initialize the streaming interface */
-    streaming_init();
+    usbd_t* usb = usbd_create(protocol);
 
-    /* Initialize protocol (start timer) */
-    protocol_init();
+    /* Show some of the clocks we have. I am interested in the fast_clock and the peripheral clock */
+    clock_hz = cyhal_clock_get_frequency(&CYHAL_CLOCK_FLL);
+    printf("@init fll clock = %" PRIu32 "\n", clock_hz );
 
-    /* Initialize PDM transmit buffers */
-    uint8_t transmit_pdm[2 * FRAME_SIZE] = {0};
-    int16_t *pdm_raw_data = (int16_t *) transmit_pdm;
+    clock_hz = cyhal_clock_get_frequency(&CYHAL_CLOCK_PLL[0]);
+    printf("@init pll_0 clock = %" PRIu32 "\n", clock_hz );
 
-    /* Configure PDM, PDM clocks, and PDM event */
-    result = pdm_init();
+    clock_hz = cyhal_clock_get_frequency(&CYHAL_CLOCK_PLL[1]);
+    printf("@init pll_1 clock = %" PRIu32 "\n", clock_hz );
 
-#ifdef IM_ENABLE_IMU
-    /* Initialize  accelerometer transmit buffers */
-    uint8_t transmit_imu[4 * IMU_AXIS] = {0};
-    float *imu_raw_data = (float*) transmit_imu;
+    clock_hz = cyhal_clock_get_frequency(&CYHAL_CLOCK_HF[0]);
+    printf("@init HF[0]_clock = %" PRIu32 "\n", clock_hz );
 
-    /* Start the imu and timer */
-    result = imu_init();
-#endif
+    clock_hz = cyhal_clock_get_frequency(&CYHAL_CLOCK_HF[1]);
+    printf("@init audio_clock HF[1] = %" PRIu32 "\n", clock_hz );
 
-#ifdef IM_ENABLE_GYRO
-    /* Initialize gyroscope transmit buffers */
-    uint8_t transmit_gyro[4 * GYRO_AXIS] = {0};
-    float *gyro_raw_data = (float*) transmit_gyro;
+    clock_hz = cyhal_clock_get_frequency(&CYHAL_CLOCK_PERI);
+    printf("@init peri_clock = %" PRIu32 "\n", clock_hz );
 
-    /* Start the imu and timer */
-    result = gyro_init();
-#endif
+    clock_hz = cyhal_clock_get_frequency(&CYHAL_CLOCK_FAST);
+    printf("@init fast_clock = %" PRIu32 "\n", clock_hz );
 
-#ifdef IM_ENABLE_MAG
-    /* Initialize magnetometer transmit buffers */
-    uint8_t transmit_bmm[4 * BMM_AXIS] = {0};
-    float *bmm_raw_data = (float*) transmit_bmm;
+    clock_hz = cyhal_clock_get_frequency(&CYHAL_CLOCK_TIMER);
+    printf("@init timer_clock = %" PRIu32 "\n", clock_hz );
 
-    /* Start the magnetometer and timer */
-    result = mag_sensor_init();
-#endif
+    clock_hz = cyhal_clock_get_frequency(&CYHAL_CLOCK_SLOW);
+    printf("@init slow_clock = %" PRIu32 "\n", clock_hz );
 
-#ifdef IM_ENABLE_DPS
-    int8 val = 0;
-    /* Initialize pressure transmit buffers */
-    uint8_t transmit_dps[4 * DPS_AXIS] = {0};
-    float *dps_raw_data = (float*) transmit_dps;
-    /* Configure DPS sensor */
-    result = dps_init();
-#endif
+    clock_hz = cyhal_clock_get_frequency(&CYHAL_CLOCK_ECO);
+    printf("@init ECO_clock = %" PRIu32 "\n", clock_hz );
 
-#if IM_ENABLE_RADAR
-     /* Initialize Radar transmit buffers */
-    uint8_t transmit_radar[2 * RADAR_AXIS] = {0};
-    int16_t *radar_raw_data = (int16_t*) transmit_radar;
 
-    /* Start the imu and timer */
-    result = radar_init();
-#endif
-
-    /* Initialization failed */
-    if (CY_RSLT_SUCCESS != result)
-    {
-        /* Reset the system on sensor fail */
-        NVIC_SystemReset();
-    }
+    printf("Ready accepting commands.\r\n");
+    set_led(false);
 
     for (;;)
     {
-        /* Handle incoming characters */
-        protocol_repl();
-
-        /* Transmit data */
-#if IM_ENABLE_IMU
-        if (true == imu_flag)
-        {
-            imu_flag = false;
-            /* Store accelerometer data */
-            imu_get_data(imu_raw_data);
-            /* Transmit data */
-            protocol_send(PROTOCOL_IMU_CHANNEL, transmit_imu, sizeof(transmit_imu));
-        }
-#endif
-
-#ifdef IM_ENABLE_GYRO
-        if (true == gyro_flag)
-        {
-            gyro_flag = false;
-            /* Store gyroscope data */
-            gyro_get_data(gyro_raw_data);
-            /* Transmit data */
-            protocol_send(PROTOCOL_GYRO_CHANNEL, transmit_gyro, sizeof(transmit_gyro));
-        }
-#endif
-
-#ifdef IM_ENABLE_MAG
-        if(true == bmm_flag)
-        {
-            bmm_flag = false;
-            /* Store magnetometer data */
-            bmm350_get_data(bmm_raw_data);
-
-            /* Transmit data */
-            protocol_send(PROTOCOL_BMM_CHANNEL, transmit_bmm, sizeof(transmit_bmm));
-        }
-#endif
-
-#ifdef IM_ENABLE_DPS
-        if(true == dps_flag)
-        {
-            dps_flag = false;
-            /* Store Pressure data */
-            val = dps_get_data(dps_raw_data);
-            if(CY_RSLT_SUCCESS == val)
-            {
-                /* Transmit data */
-                protocol_send(PROTOCOL_DPS_CHANNEL, transmit_dps, sizeof(transmit_dps));
-            }
-        }
-#endif
-
-#if IM_ENABLE_RADAR
-        if (true == radar_flag)
-        {
-            radar_flag = false;
-            /* Store radar data */
-            radar_get_data(radar_raw_data);
-            /* Transmit data */
-            protocol_send(PROTOCOL_RADAR_CHANNEL, transmit_radar, sizeof(transmit_radar));
-        }
-#endif
-
-        if (true == pdm_pcm_flag)
-        {
-            pdm_pcm_flag = false;
-            /* Store PDM data */
-            pdm_preprocessing_feed(pdm_raw_data);
-            /* Transmit data */
-            protocol_send(PROTOCOL_AUDIO_CHANNEL, transmit_pdm, sizeof(transmit_pdm));
-        }
+        protocol_process_request(protocol, &usb->istream, &usb->ostream);
     }
 }
 

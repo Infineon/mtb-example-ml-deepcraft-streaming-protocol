@@ -1,7 +1,8 @@
 /******************************************************************************
-* File Name:   clock.h
+* File Name: watchdog.h
 *
-* Description: This file provides a clock.
+* Description:
+*   Watchdog functionality
 *
 *******************************************************************************
 * Copyright 2024-2025, Cypress Semiconductor Corporation (an Infineon company) or
@@ -36,37 +37,13 @@
 * so agrees to indemnify Cypress against all liability.
 *******************************************************************************/
 
-#ifndef _CLOCK_H_
-#define _CLOCK_H_
+#ifndef _WATCHDOG_H_
+#define _WATCHDOG_H_
 
-#include <stdint.h>
+#include "protocol/protocol.h"
 
-/*******************************************************************************
-* Types
-*******************************************************************************/
+bool watchdog_enable(protocol_t* protocol, int timeout_msec);
 
-/* uint32_t will wrap around every 12 hour if CLOCK_TICK_PER_SECOND equals 100000.
- * To avoid this change clock_tick_t to uint64_t.
- */
-typedef uint64_t clock_tick_t;
-
-/*******************************************************************************
-* Defines
-*******************************************************************************/
-
-/* Number of counts per second */
-#define CLOCK_TICK_PER_SECOND 100000
-
-/* Interrupt Priority Level  */
-#define CLOCK_INTERRUPT_PRIORITY  3
-
-/*******************************************************************************
-* Function Prototypes
-*******************************************************************************/
-
-bool clock_init(void);
-clock_tick_t clock_get_tick();
-
-#endif /* _CLOCK_H_ */
+#endif /* _WATCHDOG_H_ */
 
 /* [] END OF FILE */

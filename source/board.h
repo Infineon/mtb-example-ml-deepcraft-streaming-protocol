@@ -1,7 +1,10 @@
 /******************************************************************************
-* File Name:   clock.h
+* File Name:   board.h
 *
-* Description: This file provides a clock.
+* Description: This file provides basic board functionalities like
+*         - serial
+*         - reset
+*         - debug console
 *
 *******************************************************************************
 * Copyright 2024-2025, Cypress Semiconductor Corporation (an Infineon company) or
@@ -36,37 +39,19 @@
 * so agrees to indemnify Cypress against all liability.
 *******************************************************************************/
 
-#ifndef _CLOCK_H_
-#define _CLOCK_H_
+#ifndef _BOARD_H_
+#define _BOARD_H_
 
-#include <stdint.h>
+void board_init_system(void);
 
-/*******************************************************************************
-* Types
-*******************************************************************************/
+bool board_enable_debug_console(void);
 
-/* uint32_t will wrap around every 12 hour if CLOCK_TICK_PER_SECOND equals 100000.
- * To avoid this change clock_tick_t to uint64_t.
- */
-typedef uint64_t clock_tick_t;
+uint8_t* board_get_serial_uuid(void);
 
-/*******************************************************************************
-* Defines
-*******************************************************************************/
+void board_reset(protocol_t* protocol);
 
-/* Number of counts per second */
-#define CLOCK_TICK_PER_SECOND 100000
+bool board_set_clocks(void);
 
-/* Interrupt Priority Level  */
-#define CLOCK_INTERRUPT_PRIORITY  3
-
-/*******************************************************************************
-* Function Prototypes
-*******************************************************************************/
-
-bool clock_init(void);
-clock_tick_t clock_get_tick();
-
-#endif /* _CLOCK_H_ */
+#endif /* _BOARD_H_ */
 
 /* [] END OF FILE */

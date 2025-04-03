@@ -148,19 +148,19 @@
                     <Alias value="CYBSP_QSPI_SCK"/>
                 </Block>
                 <Block location="ioss[0].port[12].pin[0]">
-                    <Alias value="CYBSP_SPI_MOSI"/>
+                    <Alias value="CYBSP_RSPI_MOSI"/>
                     <Alias value="CYBSP_D11"/>
                 </Block>
                 <Block location="ioss[0].port[12].pin[1]">
-                    <Alias value="CYBSP_SPI_MISO"/>
+                    <Alias value="CYBSP_RSPI_MISO"/>
                     <Alias value="CYBSP_D12"/>
                 </Block>
                 <Block location="ioss[0].port[12].pin[2]">
-                    <Alias value="CYBSP_SPI_CLK"/>
+                    <Alias value="CYBSP_RSPI_CLK"/>
                     <Alias value="CYBSP_D13"/>
                 </Block>
                 <Block location="ioss[0].port[12].pin[3]">
-                    <Alias value="CYBSP_SPI_CS"/>
+                    <Alias value="CYBSP_RSPI_CS"/>
                     <Alias value="CYBSP_D10"/>
                 </Block>
                 <Block location="ioss[0].port[12].pin[4]">

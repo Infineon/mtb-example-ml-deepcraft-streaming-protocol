@@ -7,7 +7,7 @@
 #
 ################################################################################
 # \copyright
-# Copyright 2024, Cypress Semiconductor Corporation (an Infineon company)
+# Copyright 2024-2025, Cypress Semiconductor Corporation (an Infineon company)
 # SPDX-License-Identifier: Apache-2.0
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,7 +46,7 @@ TARGET=CY8CKIT-062S2-AI
 #
 # If APPNAME is edited, ensure to update or regenerate launch
 # configurations for your IDE.
-APPNAME=mtb-example-imagimob-streaming-protocol
+APPNAME=mtb-example-ml-deepcraft-streaming-protocol
 
 # Name of toolchain to use. Options include:
 #
@@ -71,18 +71,14 @@ CONFIG=Debug
 VERBOSE=
 
 ifeq (APP_CY8CKIT-062S2-AI, $(TARGET))
-SHIELD_DATA_COLLECTION=AI_KIT
+SHIELD_DATA_COLLECTION=CY8CKIT_062S2_AI
 endif
 
 ifeq (APP_CY8CKIT-062S2-43012, $(TARGET))
 # Shield used to gather IMU data
 #
-# TFT_SHIELD              -- Using the 028-TFT shield
-# EPD_SHIELD		      -- Using the 028-EPD shield
-# SENSE_SHIELD            -- Using the 028-SENSE shield rev** or rev*A
-# SENSE_SHIELD_v2         -- Using the 028-SENSE shield rev*B or later
-# XENSIV_SHIELD           -- Using the SHILED_XENSIV_A sensor shield
-SHIELD_DATA_COLLECTION=XENSIV_SHIELD
+# SHILED_XENSIV_A           -- Using the SHILED_XENSIV_A sensor shield
+SHIELD_DATA_COLLECTION=SHILED_XENSIV_A
 endif
 
 ################################################################################
@@ -115,52 +111,29 @@ SOURCES=
 INCLUDES=
 
 # Add additional defines to the build process (without a leading -D).
-DEFINES=
+DEFINES+=PB_ENABLE_MALLOC CY_RETARGET_IO_CONVERT_LF_TO_CRLF
 
 # Depending which shield is used for data collection, add specific DEFINE
-ifeq (TFT_SHIELD, $(SHIELD_DATA_COLLECTION))
-DEFINES+=IM_BMI_160_IMU_I2C=1
-DEFINES+=IM_ENABLE_IMU=1
-DEFINES+=IM_ENABLE_GYRO=1
+ifeq (SHILED_XENSIV_A, $(SHIELD_DATA_COLLECTION))
+DEFINES+=IM_ENABLE_PDM_PCM
+DEFINES+=IM_XSS_BMI270
+DEFINES+=IM_XSS_BMM350
+DEFINES+=IM_XSS_DPS368
+DEFINES+=IM_ENABLE_BMI270
+DEFINES+=IM_ENABLE_BMM350
+DEFINES+=IM_ENABLE_DPS368
 endif
-ifeq (EPD_SHIELD, $(SHIELD_DATA_COLLECTION))
-DEFINES+=IM_BMI_160_IMU_I2C=1
-DEFINES+=IM_ENABLE_IMU=1
-DEFINES+=IM_ENABLE_GYRO=1
+
+ifeq (CY8CKIT_062S2_AI, $(SHIELD_DATA_COLLECTION))
+DEFINES+=IM_ENABLE_PDM_PCM
+DEFINES+=IM_ENABLE_BMI270
+DEFINES+=IM_ENABLE_BMM350
+DEFINES+=IM_ENABLE_DPS368
+DEFINES+=IM_ENABLE_BGT60TRXX
+
+ifeq ($(findstring FREERTOS, $(COMPONENTS)), FREERTOS)
+DEFINES+=IM_ENABLE_WIFI
 endif
-ifeq (SENSE_SHIELD, $(SHIELD_DATA_COLLECTION))
-DEFINES+=IM_BMX_160_IMU_SPI=1
-DEFINES+=BMI160_CHIP_ID=UINT8_C\(0xD8\)
-DEFINES+=IM_ENABLE_IMU=1
-DEFINES+=IM_ENABLE_GYRO=1
-DEFINES+=IM_ENABLE_MAG=1
-DEFINES+=IM_ENABLE_DPS=1
-endif
-ifeq (SENSE_SHIELD_v2, $(SHIELD_DATA_COLLECTION))
-DEFINES+=IM_BMI_160_IMU_SPI=1
-DEFINES+=IM_ENABLE_IMU=1
-DEFINES+=IM_ENABLE_GYRO=1
-DEFINES+=IM_ENABLE_DPS=1
-endif
-ifeq (XENSIV_SHIELD, $(SHIELD_DATA_COLLECTION))
-DEFINES+=IM_BMI_270_IMU_I2C=1
-DEFINES+=IM_XSS_BMI270=1
-DEFINES+=IM_XSS_BMM350=1
-DEFINES+=IM_XSS_DPS368=1
-DEFINES+=IM_ENABLE_IMU=1
-DEFINES+=IM_ENABLE_GYRO=1
-DEFINES+=IM_ENABLE_MAG=1
-DEFINES+=IM_ENABLE_DPS=1
-endif
-ifeq (AI_KIT, $(SHIELD_DATA_COLLECTION))
-DEFINES+=IM_BMI_270_IMU_I2C=1
-DEFINES+=IM_IMU_BMI270=1
-DEFINES+=IM_MAG_BMM350=1
-DEFINES+=IM_ENABLE_IMU=1
-DEFINES+=IM_ENABLE_GYRO=1
-DEFINES+=IM_ENABLE_MAG=1
-DEFINES+=IM_ENABLE_DPS=1
-DEFINES+=IM_ENABLE_RADAR=1
 endif
 
 # Select softfp or hardfp floating point. Default is softfp.
@@ -192,37 +165,6 @@ LDLIBS=
 
 # Path to the linker script to use (if empty, use the default linker script).
 LINKER_SCRIPT=
-
-# Custom pre-build commands to run.
-ifneq (AI_KIT, $(SHIELD_DATA_COLLECTION))
-PREBUILD+=$(SEARCH_sensor-orientation-bmx160)/bmx160_fix.bash "$(SEARCH_BMI160_driver)/bmi160_defs.h"
-endif
-
-# Exclude redundant files based on shield selection
-ifeq (TFT_SHIELD, $(SHIELD_DATA_COLLECTION))
-CY_IGNORE+=$(SEARCH_sensor-motion-bmi270) $(SEARCH_sensor-orientation-bmx160) \
-        $(SEARCH_BMI270_SensorAPI) $(SEARCH_BMM150-Sensor-API)
-endif
-ifeq (EPD_SHIELD, $(SHIELD_DATA_COLLECTION))
-CY_IGNORE+=$(SEARCH_sensor-motion-bmi270) $(SEARCH_sensor-orientation-bmx160) \
-        $(SEARCH_BMI270_SensorAPI) $(SEARCH_BMM150-Sensor-API)
-endif
-ifeq (SENSE_SHIELD, $(SHIELD_DATA_COLLECTION))
-CY_IGNORE+=$(SEARCH_sensor-motion-bmi270) $(SEARCH_sensor-motion-bmi160) \
-        $(SEARCH_BMI270_SensorAPI)
-endif
-ifeq (SENSE_SHIELD_v2, $(SHIELD_DATA_COLLECTION))
-CY_IGNORE+=$(SEARCH_sensor-motion-bmi270) $(SEARCH_sensor-orientation-bmx160) \
-        $(SEARCH_BMI270_SensorAPI) $(SEARCH_BMM150-Sensor-API)
-endif
-ifeq (XENSIV_SHIELD, $(SHIELD_DATA_COLLECTION))
-CY_IGNORE+=$(SEARCH_sensor-motion-bmi160) $(SEARCH_sensor-orientation-bmx160) \
-        $(SEARCH_BMI160_driver) $(SEARCH_BMM150-Sensor-API)
-endif
-ifeq (AI_KIT, $(SHIELD_DATA_COLLECTION))
-CY_IGNORE+=$(SEARCH_sensor-motion-bmi160) $(SEARCH_sensor-orientation-bmx160) \
-        $(SEARCH_BMI160_driver) $(SEARCH_BMM150-Sensor-API)
-endif
 
 # Custom post-build commands to run.
 POSTBUILD=

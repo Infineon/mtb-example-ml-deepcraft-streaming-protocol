@@ -1,7 +1,8 @@
 /******************************************************************************
-* File Name:   clock.h
+* File Name: watchdog.c
 *
-* Description: This file provides a clock.
+* Description:
+*   Watchdog functionality
 *
 *******************************************************************************
 * Copyright 2024-2025, Cypress Semiconductor Corporation (an Infineon company) or
@@ -36,37 +37,56 @@
 * so agrees to indemnify Cypress against all liability.
 *******************************************************************************/
 
-#ifndef _CLOCK_H_
-#define _CLOCK_H_
+#include <cyhal.h>
+#include <cybsp.h>
 
-#include <stdint.h>
+#include "protocol/protocol.h"
+#include "watchdog.h"
 
-/*******************************************************************************
-* Types
-*******************************************************************************/
-
-/* uint32_t will wrap around every 12 hour if CLOCK_TICK_PER_SECOND equals 100000.
- * To avoid this change clock_tick_t to uint64_t.
- */
-typedef uint64_t clock_tick_t;
 
 /*******************************************************************************
-* Defines
+* Function Name: watchdog_reset
+********************************************************************************
+* Summary:
+*   Resets watchdog timer preventing the board from resetting.
+*
+* Parameters:
+*   protocol: Pointer to the protocol object.
 *******************************************************************************/
-
-/* Number of counts per second */
-#define CLOCK_TICK_PER_SECOND 100000
-
-/* Interrupt Priority Level  */
-#define CLOCK_INTERRUPT_PRIORITY  3
+static void watchdog_reset(protocol_t* protocol)
+{
+    UNUSED(protocol);
+    cyhal_wdt_kick(NULL);
+}
 
 /*******************************************************************************
-* Function Prototypes
+* Function Name: watchdog_enable
+********************************************************************************
+* Summary:
+*   Enable watchdog timer .
+*
+* Parameters:
+*   protocol: Pointer to the protocol object.
+*   timeout_msec: How often the board expects an reset message.
+*      The actual reset timeout is 1.5 times this.
+* Return:
+*   True if initialization is successful, otherwise false.
 *******************************************************************************/
+bool watchdog_enable(protocol_t* protocol, int timeout_msec)
+{
+    cy_rslt_t result;
+    static cyhal_wdt_t wdt;
 
-bool clock_init(void);
-clock_tick_t clock_get_tick();
+    result = cyhal_wdt_init(&wdt, (uint32_t)(timeout_msec * 1.5));
 
-#endif /* _CLOCK_H_ */
+    if (result != CY_RSLT_SUCCESS)
+    {
+        return false;
+    }
+
+    protocol_configure_watchdog(protocol, timeout_msec, watchdog_reset);
+
+    return true;
+}
 
 /* [] END OF FILE */

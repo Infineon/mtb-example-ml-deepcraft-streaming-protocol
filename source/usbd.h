@@ -1,7 +1,8 @@
 /******************************************************************************
-* File Name:   clock.h
+* File Name:   usbd.h
 *
-* Description: This file provides a clock.
+* Description: This file contains the function prototypes and constants used
+*   in usbd.c.
 *
 *******************************************************************************
 * Copyright 2024-2025, Cypress Semiconductor Corporation (an Infineon company) or
@@ -36,37 +37,36 @@
 * so agrees to indemnify Cypress against all liability.
 *******************************************************************************/
 
-#ifndef _CLOCK_H_
-#define _CLOCK_H_
+#ifndef __USBD_H__
+#define __USBD_H__
 
-#include <stdint.h>
+#include "protocol/protocol.h"
+#include "protocol/pb_encode.h"
+#include "protocol/pb_decode.h"
+
+#include "USB.h"
+#include "USB_CDC.h"
 
 /*******************************************************************************
 * Types
-*******************************************************************************/
+********************************************************************************/
 
-/* uint32_t will wrap around every 12 hour if CLOCK_TICK_PER_SECOND equals 100000.
- * To avoid this change clock_tick_t to uint64_t.
- */
-typedef uint64_t clock_tick_t;
+typedef struct {
+    protocol_t* protocol;
+    pb_istream_t istream;    /* input stream */
+    pb_ostream_t ostream;    /* output stream */
 
-/*******************************************************************************
-* Defines
-*******************************************************************************/
-
-/* Number of counts per second */
-#define CLOCK_TICK_PER_SECOND 100000
-
-/* Interrupt Priority Level  */
-#define CLOCK_INTERRUPT_PRIORITY  3
+    USB_CDC_HANDLE usb_cdcHandle;
+    USB_DEVICE_INFO usb_deviceInfo;
+} usbd_t;
 
 /*******************************************************************************
 * Function Prototypes
 *******************************************************************************/
 
-bool clock_init(void);
-clock_tick_t clock_get_tick();
+usbd_t* usbd_create(protocol_t *protocol);
+void usbd_free(usbd_t* usb);
 
-#endif /* _CLOCK_H_ */
+#endif /*__USBD_H__ */
 
 /* [] END OF FILE */

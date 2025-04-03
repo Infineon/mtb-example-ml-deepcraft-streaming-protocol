@@ -1,7 +1,8 @@
 /******************************************************************************
-* File Name:   clock.h
+* File Name: common.c
 *
-* Description: This file provides a clock.
+* Description:
+*   This file contains common utility functions used across the project.
 *
 *******************************************************************************
 * Copyright 2024-2025, Cypress Semiconductor Corporation (an Infineon company) or
@@ -36,37 +37,67 @@
 * so agrees to indemnify Cypress against all liability.
 *******************************************************************************/
 
-#ifndef _CLOCK_H_
-#define _CLOCK_H_
+#include <cy_result.h>
+#include <cy_utils.h>
+#include <cyhal.h>
+#include <cybsp.h>
 
-#include <stdint.h>
-
-/*******************************************************************************
-* Types
-*******************************************************************************/
-
-/* uint32_t will wrap around every 12 hour if CLOCK_TICK_PER_SECOND equals 100000.
- * To avoid this change clock_tick_t to uint64_t.
- */
-typedef uint64_t clock_tick_t;
+#include "common.h"
 
 /*******************************************************************************
-* Defines
+* Function Name: set_led
+********************************************************************************
+* Summary:
+*   Sets the status LED.
+*
+* Parameters:
+*   state: The desired state of the LED. 'true' for ON, 'false' for OFF.
+*
 *******************************************************************************/
-
-/* Number of counts per second */
-#define CLOCK_TICK_PER_SECOND 100000
-
-/* Interrupt Priority Level  */
-#define CLOCK_INTERRUPT_PRIORITY  3
+void set_led(bool state)
+{
+    cyhal_gpio_write(CYBSP_USER_LED, state ? CYBSP_LED_STATE_OFF : CYBSP_LED_STATE_ON);
+}
 
 /*******************************************************************************
-* Function Prototypes
+* Function Name: halt_error
+********************************************************************************
+* Summary:
+*  Flash the given error code indefinitely. This function never returns.
+*
+*  Blink pattern:
+*  0:  .        10: ..-      20: .--.
+*  1:  -        11: -.-      21: ---.
+*  2:  ..       12: .--      22: ...-
+*  3:  -.       13: ---      23: -..-
+*  4:  .-       14: ....     24: .-.-
+*  5:  --       15: -...     25: --.-
+*  6:  ...      16: .-..     26: ..--
+*  7:  -..      17: --..     27: -.--
+*  8:  .-.      18: ..-.     28: .---
+*  9:  --.      19: -.-.     29: ----
 *******************************************************************************/
+void halt_error(int code)
+{
+    __disable_irq();
 
-bool clock_init(void);
-clock_tick_t clock_get_tick();
+    if(code < 0)
+    {
+        code = -code;
+    }
 
-#endif /* _CLOCK_H_ */
+    do {
+        int i = code + 2;
+        do {
+            set_led(true);
+            Cy_SysLib_Delay((i & 1) ? LED_LONG_ON_TIME : LED_SHORT_ON_TIME);
+            set_led(false);
+            Cy_SysLib_Delay(LED_OFF_TIME);
+            i >>= 1;
+        } while(i > 1);
+
+        Cy_SysLib_Delay(LED_CODE_SEPARATOR_TIME);
+    } while(true);
+}
 
 /* [] END OF FILE */

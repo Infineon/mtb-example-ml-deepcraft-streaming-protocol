@@ -1,7 +1,8 @@
 /******************************************************************************
-* File Name:   clock.h
+* File Name: common.h
 *
-* Description: This file provides a clock.
+* Description:
+*   This file contains common utility functions used across the project.
 *
 *******************************************************************************
 * Copyright 2024-2025, Cypress Semiconductor Corporation (an Infineon company) or
@@ -36,37 +37,69 @@
 * so agrees to indemnify Cypress against all liability.
 *******************************************************************************/
 
-#ifndef _CLOCK_H_
-#define _CLOCK_H_
+#ifndef __COMMON_H__
+#define __COMMON_H__
 
-#include <stdint.h>
-
-/*******************************************************************************
-* Types
-*******************************************************************************/
-
-/* uint32_t will wrap around every 12 hour if CLOCK_TICK_PER_SECOND equals 100000.
- * To avoid this change clock_tick_t to uint64_t.
- */
-typedef uint64_t clock_tick_t;
+#include <stdbool.h>
 
 /*******************************************************************************
 * Defines
 *******************************************************************************/
 
-/* Number of counts per second */
-#define CLOCK_TICK_PER_SECOND 100000
+#define LED_SHORT_ON_TIME 100         /* Short blink duration in milliseconds */
+#define LED_LONG_ON_TIME 300          /* Long blink duration in milliseconds */
+#define LED_OFF_TIME 300              /* Pause duration between blinks */
+#define LED_CODE_SEPARATOR_TIME 3000  /* Pause duration between repeating error codes in milliseconds */
 
-/* Interrupt Priority Level  */
-#define CLOCK_INTERRUPT_PRIORITY  3
+/*
+*  Blink pattern:
+*  0:  .        10: ..-      20: .--.
+*  1:  -        11: -.-      21: ---.
+*  2:  ..       12: .--      22: ...-
+*  3:  -.       13: ---      23: -..-
+*  4:  .-       14: ....     24: .-.-
+*  5:  --       15: -...     25: --.-
+*  6:  ...      16: .-..     26: ..--
+*  7:  -..      17: --..     27: -.--
+*  8:  .-.      18: ..-.     28: .---
+*  9:  --.      19: -.-.     29: ----
+*
+*  Avoid patterns with only dots or dashes.
+*  They are hard distinguish from each other.
+*/
+#define LED_CODE_GENERIC_ERROR          (3)
+#define LED_CODE_UART_ERROR             (4)
+#define LED_CODE_MEMORY_ERROR           (7)
+#define LED_CODE_I2C_ERROR              (8)
+#define LED_CODE_STDOUT_RETARGET_ERROR  (9)
+#define LED_CODE_CLOCK_ERROR            (10)
+#define LED_CODE_SPI_ERROR              (11)
+#define LED_CODE_WATCHDOG_ERROR         (12)
+#define LED_CODE_SENSOR_PDM_PCM_ERROR   (15) /* Microphone error */
+#define LED_CODE_SENSOR_BMI270_ERROR    (16) /* Accelerometer/Gyro */
+#define LED_CODE_SENSOR_BMM350_ERROR    (17) /* Magnetometer */
+#define LED_CODE_SENSOR_DPS368_ERROR    (18) /* Digital pressure sensor */
+#define LED_CODE_SENSOR_BGT60TRXX_ERROR (19) /* RADAR sensor */
+
+/*
+ * Enable verbose printing to debug console.
+ * This might have a performance impact and should normally be disabled.
+ * Use this for high-frequency printing.*/
+/* #define ENABLE_DEBUG_PRINT (1) */
+
+#if ENABLE_DEBUG_PRINT
+    #define DEBUG_PRINT(...)  printf(__VA_ARGS__)
+#else
+    #define DEBUG_PRINT(...)  /* Do nothing */
+#endif
 
 /*******************************************************************************
 * Function Prototypes
 *******************************************************************************/
 
-bool clock_init(void);
-clock_tick_t clock_get_tick();
+void set_led(bool state);
+void halt_error(int led_flash_code);
 
-#endif /* _CLOCK_H_ */
+#endif /* __COMMON_H__ */
 
 /* [] END OF FILE */
